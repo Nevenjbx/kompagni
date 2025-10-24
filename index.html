@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kompagni</title>
+    <meta name="apple-mobile-web-app-status-bar-style" content="white">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -532,7 +533,6 @@
                 gap: 3rem;
                 text-align: center;
             }
-
             .hero-text,
             .early-access-text,
             .form-container {
@@ -544,7 +544,7 @@
             }
 
             .hero-illustration {
-                height: 400px;
+                height: 300px; /* Ancien: 400px. Nouvelle hauteur plus petite pour économiser de l'espace. */
             }
 
             .early-access-text h2,
@@ -552,9 +552,6 @@
                 font-size: 3rem;
             }
 
-            .form-container {
-                padding: 3rem 2rem;
-            }
 
             .form-info p {
                 text-align: left;
@@ -582,22 +579,41 @@
         }
 
         @media (max-width: 600px) {
+            /* Réduction des titres très grands */
             .hero-text h1 {
-                font-size: 2.5rem;
-                letter-spacing: -2px;
+                font-size: 2.2rem; /* Encore plus petit pour les petits téléphones */
+                letter-spacing: -1px;
+                margin-bottom: 1rem;
+            }
+
+            /* Réduction des sous-titres et des titres de section */
+            .hero-text p, 
+            .early-access-text .subtitle,
+            .section-subtitle {
+                font-size: 1rem !important; /* On force la réduction des paragraphes */
+                line-height: 1.4;
             }
 
             .early-access-text h2,
             .section-title {
-                font-size: 2.2rem;
+                font-size: 2rem; /* Réduction des H2 */
+                margin-bottom: 1rem;
             }
 
             .contact h2 {
-                font-size: 2.5rem;
+                font-size: 2rem;
             }
-
+            
             .form-container {
-                padding: 2rem 1.5rem;
+                padding: 1.5rem; /* Moins de padding */
+            }
+            
+            /* Ajustement des chemins d'étape */
+            .journey-path h3 {
+                font-size: 1.5rem;
+            }
+            .step-content h4 {
+                font-size: 1.1rem;
             }
         }
     </style>

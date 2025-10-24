@@ -533,13 +533,28 @@
                 gap: 3rem;
                 text-align: center;
             }
-            
+
             .hero-text,
             .early-access-text,
             .form-container {
                 order: unset;
             }
 
+            .journey-path .step-header::before {
+                height: 40px; /* Ancien: 50px */
+                width: 40px; /* Ancien: 50px */
+                font-size: 1.2rem; /* Ancien: 1.5rem */
+                line-height: 40px; /* Ancien: 50px (pour centrer le texte) */
+            }
+
+            .benefit-card .benefit-icon {
+                height: 60px; /* Ancien: 70px */
+                width: 60px; /* Ancien: 70px */
+                font-size: 2.2rem; /* Ancien: 2.5rem */
+                line-height: 60px; /* Ancien: 70px (pour centrer l'icône) */
+                margin-bottom: 0.5rem; /* Réduit l'espace en dessous */
+            }
+            
             .benefit-category h3 {
                 font-size: 1.8rem; /* Ancien: 2.2rem. Nouvelle taille réduite. */
                 margin-bottom: 2rem; /* Vous pouvez aussi réduire la marge si besoin */

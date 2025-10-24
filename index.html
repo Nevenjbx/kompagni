@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kompagni</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <link rel="icon" type="image/ico" sizes="96x96" href="favicon.ico">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --dark-green: #013928;
+            --bright-green: #9FE880;
+            --white: #FFFFFF;
+            --light-bg: #F8FBF6;
+            --border-radius: 40px; /* Variable pour contrôler tous les arrondis */
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            color: var(--dark-green);
+            line-height: 1.6;
+            overflow-x: hidden;
+            cursor: crosshair;
+        }
+        h1, h2, h3, h4, h5, h6, .logo {
+                font-family: 'Space Grotesk', sans-serif;
+        }
+
+        /* Navigation */
+        nav {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            background: var(--bright-green); /* Vert clair par défaut */
+            padding: 1.5rem 5%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 1000;
+            transition: all 0.3s ease; /* Animation smooth */
+        }
+
+        nav.scrolled {
+            background: rgba(255, 255, 255, 0.4);
+            backdrop-filter: blur(40px);
+            box-shadow: 0 2px 20px rgba(1, 57, 40, 0.05);
+        }
+        .logo {
+            font-size: 1.8rem;
+            font-weight: 800; /* Déjà à 800, passe à 900 (maximum) */
+            color: var(--dark-green);
+            letter-spacing: -1px;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: var(--dark-green);
+            text-decoration: none;
+            font-weight: 600;
+            position: relative;
+            transition: color 0.3s;
+        }
+
+        .nav-links a::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: var(--dark-green);
+            transition: width 0.3s ease;
+        }
+
+        .nav-links a:hover::after {
+            width: 100%;
+        }
+
+        .nav-links a:hover {
+            color: var(--dark-green);
+        }
+
+        /* Hero Section - Illustration à GAUCHE, texte à DROITE */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            padding: 4rem 5%;
+            background: var(--bright-green);
+        }
+
+        .hero-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 5rem;
+            max-width: 1400px;
+            margin: 0 auto;
+            width: 100%;
+            align-items: center;
+        }
+
+        .hero-text {
+            order: 2;
+        }
+
+        .hero-text h1 {
+            font-size: 5rem;
+            font-weight: 900;
+            line-height: 1;
+            margin-bottom: 2rem;
+            color: var(--dark-green);
+            letter-spacing: -3px;
+        }
+
+        .hero-text p {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--dark-green);
+            opacity: 0.8;
+            font-weight: 400;
+            line-height: 1.5;
+        }
+
+        .hero-illustration {
+            width: 100%;
+            height: 550px;
+            background: #fdf9f5;
+            border-radius: 100px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 30px 80px rgba(1, 57, 40, 0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .hero-illustration img {
+            width: 100%;
+            height: auto;
+            max-height: 100%;
+            object-fit: cover; /* Remplit tout l'espace */            
+            z-index: 2;
+            position: relative;
+        }
+        .shape-1 {
+            position: absolute;
+            width: 200px;
+            height: 200px;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            animation: morph 10s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-30px) rotate(5deg); }
+        }
+
+        @keyframes morph {
+            0%, 100% { border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%; transform: translate(-50%, -50%) rotate(0deg); }
+            50% { border-radius: 70% 30% 50% 50% / 30% 60% 40% 70%; transform: translate(-50%, -50%) rotate(180deg); }
+        }
+
+        /* Early Access Section - Formulaire à GAUCHE, texte à DROITE */
+        .early-access {
+            padding: 8rem 5%;
+            background: var(--white);
+        }
+
+        .early-access-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6rem;
+            align-items: center;
+        }
+
+        .early-access-text {
+            order: 2;
+        }
+
+        .early-access-text h2 {
+            font-size: 4rem;
+            font-weight: 900;
+            margin-bottom: 1.5rem;
+            color: var(--dark-green);
+            letter-spacing: -2px;
+            line-height: 1.1;
+        }
+
+        .early-access-text .subtitle {
+            font-size: 1.3rem;
+            color: var(--dark-green);
+            opacity: 0.7;
+            font-weight: 400;
+        }
+
+        .form-container {
+            order: 1;
+            background: var(--light-bg);
+            padding: 4rem;
+            border-radius: var(--border-radius);
+            box-shadow: 0 20px 60px rgba(1, 57, 40, 0.08);
+        }
+
+        .form-info {
+            background: var(--white);
+            padding: 1.5rem;
+            border-radius: calc(var(--border-radius) / 2);
+            margin-bottom: 2.5rem;
+            border-left: 4px solid var(--dark-green);
+        }
+
+        .form-info p {
+            color: var(--dark-green);
+            opacity: 0.8;
+            font-size: 0.95rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: var(--dark-green);
+            font-size: 1rem;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 1.2rem;
+            border: 2px solid rgba(1, 57, 40, 0.1);
+            border-radius: calc(var(--border-radius) / 2.5);
+            font-size: 1rem;
+            transition: all 0.3s;
+            background: var(--white);
+            font-weight: 500;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: var(--dark-green);
+            box-shadow: 0 0 0 4px rgba(1, 57, 40, 0.1);
+        }
+
+        .btn-primary {
+            width: 100%;
+            padding: 1.4rem;
+            background: var(--bright-green);
+            color: var(--dark-green);
+            border: none;
+            border-radius: calc(var(--border-radius) / 2.5);
+            font-size: 1.2rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 1rem;
+        }
+
+        .btn-primary:hover {
+            background: #024d37;
+            transform: translateY(-3px);
+            box-shadow: 0 15px 40px rgba(1, 57, 40, 0.3);
+        }
+
+
+
+        /* How it Works Section */
+        .how-it-works {
+            padding: 8rem 5%;
+            background: var(--light-bg);
+        }
+
+        .how-it-works-header {
+            max-width: 1400px;
+            margin: 0 auto 5rem;
+        }
+
+        .section-title {
+            font-size: 4rem;
+            font-weight: 900;
+            margin-bottom: 1rem;
+            color: var(--dark-green);
+            letter-spacing: -2px;
+        }
+
+        .section-subtitle {
+            font-size: 1.3rem;
+            color: var(--dark-green);
+            opacity: 0.7;
+            font-weight: 400;
+        }
+
+        .journey-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            gap: 3rem;
+        }
+
+        .journey-path {
+            flex: 1;
+            background: var(--white);
+            padding: 3.5rem;
+            border-radius: var(--border-radius);
+            box-shadow: 0 15px 50px rgba(1, 57, 40, 0.08);
+        }
+
+        .journey-path h3 {
+            font-size: 2rem;
+            font-weight: 800;
+            margin-bottom: 2.5rem;
+            color: var(--dark-green);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            letter-spacing: -1px;
+        }
+
+        .user-badge {
+            width: 50px;
+            height: 50px;
+            background: var(--bright-green);
+            border-radius: calc(var(--border-radius) / 3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        .step {
+            display: flex;
+            gap: 1.5rem;
+            margin-bottom: 2.5rem;
+            opacity: 0;
+            transform: translateY(20px);
+            animation: fadeInUp 0.6s forwards;
+        }
+
+        .step:nth-child(1) { animation-delay: 0.1s; }
+        .step:nth-child(2) { animation-delay: 0.2s; }
+        .step:nth-child(3) { animation-delay: 0.3s; }
+        .step:nth-child(4) { animation-delay: 0.4s; }
+
+        @keyframes fadeInUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .step-number {
+            width: 55px;
+            height: 55px;
+            background: var(--bright-green);
+            border-radius: calc(var(--border-radius) / 3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 1.5rem;
+            color: var(--dark-green);
+            flex-shrink: 0;
+        }
+
+        .step-content h4 {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            color: var(--dark-green);
+        }
+
+        .step-content p {
+            color: var(--dark-green);
+            opacity: 0.7;
+            font-size: 1rem;
+        }
+
+        /* Benefits Section - Texte à GAUCHE, cards à DROITE */
+        .benefits {
+            padding: 8rem 5%;
+            background: var(--white);
+        }
+
+        .benefits-header {
+            max-width: 1400px;
+            margin: 0 auto 4rem;
+        }
+
+        .benefits-grid {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 4rem;
+        }
+
+        .benefit-category h3 {
+            font-size: 2.2rem;
+            font-weight: 800;
+            margin-bottom: 2.5rem;
+            color: var(--dark-green);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            letter-spacing: -1px;
+        }
+
+        .benefit-card {
+            background: var(--light-bg);
+            padding: 2.5rem;
+            border-radius: var(--border-radius);
+            margin-bottom: 1.5rem;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
+
+        .benefit-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--dark-green);
+            box-shadow: 0 15px 40px rgba(1, 57, 40, 0.1);
+        }
+
+        .benefit-icon {
+            width: 65px;
+            height: 65px;
+            background: var(--dark-green);
+            border-radius: calc(var(--border-radius) / 2.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1.2rem;
+            font-size: 2rem;
+        }
+
+        .benefit-card h4 {
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin-bottom: 0.8rem;
+            color: var(--dark-green);
+        }
+
+        .benefit-card p {
+            color: var(--dark-green);
+            opacity: 0.7;
+            font-size: 1rem;
+            line-height: 1.6;
+        }
+
+        /* Contact Section */
+        .contact {
+            padding: 8rem 5%;
+            background: var(--dark-green);
+            color: var(--white);
+        }
+
+        .contact-content {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .contact h2 {
+            font-size: 3.5rem;
+            font-weight: 900;
+            margin-bottom: 1.5rem;
+            letter-spacing: -2px;
+        }
+
+        .contact p {
+            font-size: 1.3rem;
+            opacity: 0.9;
+            margin-bottom: 2.5rem;
+        }
+
+        .contact-email {
+            font-size: 1.8rem;
+            color: var(--bright-green);
+            text-decoration: none;
+            font-weight: 700;
+            transition: all 0.3s;
+            display: inline-block;
+        }
+
+        .contact-email:hover {
+            transform: scale(1.05);
+            text-shadow: 0 0 20px rgba(159, 232, 112, 0.5);
+        }
+
+        /* Footer */
+        footer {
+            padding: 2rem 5%;
+            background: var(--dark-green);
+            color: var(--white);
+            border-top: 1px solid rgba(159, 232, 112, 0.2);
+            opacity: 0.8;
+        }
+
+        .footer-content {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* Responsive */
+        @media (max-width: 968px) {
+            .hero-content,
+            .early-access-content {
+                grid-template-columns: 1fr;
+                gap: 3rem;
+                text-align: center;
+            }
+
+            .hero-text,
+            .early-access-text,
+            .form-container {
+                order: unset;
+            }
+
+            .hero-text h1 {
+                font-size: 3.5rem;
+            }
+
+            .hero-illustration {
+                height: 400px;
+            }
+
+            .early-access-text h2,
+            .section-title {
+                font-size: 3rem;
+            }
+
+            .form-container {
+                padding: 3rem 2rem;
+            }
+
+            .form-info p {
+                text-align: left;
+            }
+
+            .journey-container {
+                flex-direction: column;
+            }
+
+            .benefits-grid {
+                grid-template-columns: 1fr;
+                gap: 3rem;
+            }
+
+            .how-it-works-header,
+            .benefits-header,
+            .contact-content,
+            .footer-content {
+                text-align: center;
+            }
+
+            .nav-links {
+                display: none;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .hero-text h1 {
+                font-size: 2.5rem;
+                letter-spacing: -2px;
+            }
+
+            .early-access-text h2,
+            .section-title {
+                font-size: 2.2rem;
+            }
+
+            .contact h2 {
+                font-size: 2.5rem;
+            }
+
+            .form-container {
+                padding: 2rem 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="cursor-follower"></div>
+    <!-- Navigation -->
+    <nav>
+        <div class="logo">Kompagni</div>
+        <ul class="nav-links">
+            <li><a href="#inscription">Inscription</a></li>
+            <li><a href="#comment">Comment ça marche</a></li>
+            <li><a href="#benefices">Bénéfices</a></li>
+            <li><a href="#contact">Contact</a></li>
+        </ul>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-content">
+            <div class="hero-illustration">
+                <img src="header_pic.png" alt="Illustration Kompagni">
+            </div>
+            <div class="hero-text">
+                <h1>Prendre soin, simplement.</h1>
+                <p>La plateforme qui connecte propriétaires d'animaux et professionnels du bien-être animal. En toute confiance.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Early Access Section -->
+    <section class="early-access" id="inscription">
+        <div class="early-access-content">
+            <div class="form-container">
+                <div class="form-info">
+                    <p>💡 <strong>Pourquoi ces infos ?</strong> Vos données nous aident à mesurer l'intérêt pour le projet et à rester proche de vous. On construit Kompagni ensemble.</p>
+                </div>
+                
+                <form id="earlyAccessForm">
+                    <div class="form-group">
+                        <label for="email">Email</label>
+                        <input type="email" id="email" placeholder="votre@email.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="status">Vous êtes</label>
+                        <select id="status" required>
+                            <option value="">Sélectionnez votre profil</option>
+                            <option value="particulier">🐾 Propriétaire d'animal</option>
+                            <option value="professionnel">💼 Professionnel animalier</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="city">Ville</label>
+                        <input type="text" id="city" placeholder="Poitiers, Paris, Lyon..." required>
+                    </div>
+                    <button type="submit" class="btn-primary">Être informé du lancement</button>
+                </form>
+            </div>
+            <div class="early-access-text">
+                <h2>Rejoignez l'aventure dès maintenant</h2>
+                <p class="subtitle">Inscrivez-vous pour être parmi les premiers informés du lancement</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- How it Works Section -->
+    <section class="how-it-works" id="comment">
+        <div class="how-it-works-header">
+            <h2 class="section-title">Comment ça marche ?</h2>
+            <p class="section-subtitle">Un parcours fluide pour tous</p>
+        </div>
+        <div class="journey-container">
+            <div class="journey-path">
+                <h3><span class="user-badge">🐾</span> Pour les propriétaires</h3>
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <div class="step-content">
+                        <h4>Recherchez un professionnel</h4>
+                        <p>Trouvez le toiletteur, vétérinaire ou éducateur près de chez vous grâce à notre moteur de recherche intelligent.</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <div class="step-content">
+                        <h4>Consultez les profils et avis</h4>
+                        <p>Comparez les services, tarifs et lisez les avis vérifiés d'autres propriétaires.</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <div class="step-content">
+                        <h4>Réservez en un clic</h4>
+                        <p>Choisissez le créneau qui vous convient et confirmez votre rendez-vous instantanément.</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-number">4</div>
+                    <div class="step-content">
+                        <h4>Profitez sereinement</h4>
+                        <p>Recevez des rappels automatiques et prenez soin de votre compagnon l'esprit tranquille.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="journey-path">
+                <h3><span class="user-badge">💼</span> Pour les professionnels</h3>
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <div class="step-content">
+                        <h4>Créez votre profil</h4>
+                        <p>Présentez votre activité, vos services et mettez en valeur votre expertise en quelques clics.</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <div class="step-content">
+                        <h4>Gérez vos disponibilités</h4>
+                        <p>Configurez votre agenda et vos créneaux directement depuis votre tableau de bord intuitif.</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <div class="step-content">
+                        <h4>Recevez des réservations</h4>
+                        <p>Les clients réservent en ligne, vous recevez les notifications instantanément.</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-number">4</div>
+                    <div class="step-content">
+                        <h4>Développez votre activité</h4>
+                        <p>Gagnez en visibilité, fidélisez vos clients et concentrez-vous sur votre métier.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Benefits Section -->
+    <section class="benefits" id="benefices">
+        <div class="benefits-header">
+            <h2 class="section-title">Pourquoi choisir Kompagni ?</h2>
+            <p class="section-subtitle">Des bénéfices concrets pour tous</p>
+        </div>
+        <div class="benefits-grid">
+            <div class="benefit-category">
+                <h3>🐾 Pour les propriétaires</h3>
+                
+                <div class="benefit-card">
+                    <div class="benefit-icon">⚡</div>
+                    <h4>Simplicité absolue</h4>
+                    <p>Trouvez et réservez le professionnel idéal en quelques clics, sans appels téléphoniques ni attente.</p>
+                </div>
+
+                <div class="benefit-card">
+                    <div class="benefit-icon">🛡️</div>
+                    <h4>Confiance garantie</h4>
+                    <p>Accédez aux avis vérifiés et profils détaillés pour faire le meilleur choix pour votre compagnon.</p>
+                </div>
+
+                <div class="benefit-card">
+                    <div class="benefit-icon">🌱</div>
+                    <h4>Approche éthique</h4>
+                    <p>Soutenez des professionnels engagés qui partagent vos valeurs de respect et de bien-être animal.</p>
+                </div>
+            </div>
+
+            <div class="benefit-category">
+                <h3>💼 Pour les professionnels</h3>
+                
+                <div class="benefit-card">
+                    <div class="benefit-icon">📈</div>
+                    <h4>Plus de visibilité</h4>
+                    <p>Développez votre clientèle grâce à une présence en ligne optimisée et accessible 24/7.</p>
+                </div>
+
+                <div class="benefit-card">
+                    <div class="benefit-icon">⏰</div>
+                    <h4>Gain de temps précieux</h4>
+                    <p>Automatisez vos prises de rendez-vous et réduisez les tâches administratives chronophages.</p>
+                </div>
+
+                <div class="benefit-card">
+                    <div class="benefit-icon">💡</div>
+                    <h4>Outils professionnels</h4>
+                    <p>Pilotez votre activité avec un tableau de bord complet : statistiques, agenda, notifications.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact Section -->
+    <section class="contact" id="contact">
+        <div class="contact-content">
+            <h2>Une question ? Parlons-en</h2>
+            <p>Nous sommes à votre écoute pour construire ensemble la plateforme dont les animaux ont besoin.</p>
+            <a href="mailto:contact@kompagni.fr" class="contact-email">contact@kompagni.fr</a>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-content">
+            <p>&copy; 2025 Kompagni - Prendre soin, simplement</p>
+        </div>
+    </footer>
+
+    <script>
+
+        // Smooth scroll
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            });
+        });
+
+        // Form submission
+        document.getElementById('earlyAccessForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const status = document.getElementById('status').value;
+            const city = document.getElementById('city').value;
+            
+            // Simulation d'envoi (à remplacer par votre backend)
+            console.log('Inscription:', { email, status, city });
+            
+            // Feedback utilisateur
+            alert('Merci ! Nous vous contacterons dès le lancement de Kompagni 🐾');
+            this.reset();
+        });
+        // Nav scroll effect
+        const nav = document.querySelector('nav');
+
+        window.addEventListener('scroll', function() {
+            if (window.scrollY > 50) {
+                nav.classList.add('scrolled');
+            } else {
+                nav.classList.remove('scrolled');
+            }
+        });
+        // Scroll animations
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -100px 0px'
+        };
+
+        const observer = new IntersectionObserver(function(entries) {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.benefit-card, .journey-path').forEach(el => {
+            el.style.opacity = '0';
+            el.style.transform = 'translateY(30px)';
+            el.style.transition = 'all 0.6s ease-out';
+            observer.observe(el);
+        });
+    </script>
+</body>
+</html>

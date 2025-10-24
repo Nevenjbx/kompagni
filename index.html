@@ -548,11 +548,17 @@
             }
 
             .benefit-card .benefit-icon {
-                height: 40px; /* Ancien: 70px */
+                height: 40px; /* La boîte est à 40px */
                 width: 40px; /* Ancien: 70px */
                 font-size: 2rem; /* Ancien: 2.5rem */
                 line-height: 40px; /* Ancien: 70px (pour centrer l'icône) */
                 margin-bottom: 0.5rem; /* Réduit l'espace en dessous */
+            }
+
+            .benefit-card .benefit-icon img {
+                width: 100%; 
+                height: 100%;
+                object-fit: contain; /* S'assure que l'image ne déborde pas sans être déformée */
             }
 
             .benefit-category h3 {

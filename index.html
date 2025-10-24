@@ -539,16 +539,18 @@
                 order: unset;
             }
 
+            /* Masque les badges 🐾 et 💼 dans la section "Comment ça marche" (Fonctionne déjà) */
             .journey-path h3 .user-badge {
                 display: none;
             }
 
-            /* Masque les badges 🐾 et 💼 dans la section "Bénéfices" */
-            .benefit-category h3 .user-badge {
+            /* NOUVELLE RÈGLE : Cible et masque l'icône (maintenant encadrée par .category-icon) */
+            .benefit-category h3 .category-icon {
                 display: none;
             }
 
-            /* Masque tous les icones à côté des titres de catégories */
+            /* Laissez ces règles existantes si vous souhaitez cacher les autres icônes (⚡, 🛡️, etc.) */
+            .benefit-category h3 .user-badge,
             .benefit-category h3 .benefit-icon {
                 display: none;
             }
@@ -777,7 +779,7 @@
         </div>
         <div class="benefits-grid">
             <div class="benefit-category">
-                <h3>🐾 Pour les propriétaires</h3>
+                <h3><span class="category-icon">🐾</span> Pour les propriétaires</h3>
                 
                 <div class="benefit-card">
                     <div class="benefit-icon">⚡</div>
@@ -799,7 +801,7 @@
             </div>
 
             <div class="benefit-category">
-                <h3>💼 Pour les professionnels</h3>
+                <h3><span class="category-icon">💼</span> Pour les professionnels</h3>
                 
                 <div class="benefit-card">
                     <div class="benefit-icon">📈</div>

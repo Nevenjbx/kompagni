@@ -1,3 +1,6 @@
+import 'service.dart';
+import 'working_hours.dart';
+
 class Provider {
   final String id;
   final String businessName;
@@ -7,6 +10,8 @@ class Provider {
   final String postalCode;
   final double? latitude;
   final double? longitude;
+  final List<Service> services;
+  final List<WorkingHours> workingHours;
 
   Provider({
     required this.id,
@@ -17,6 +22,8 @@ class Provider {
     required this.postalCode,
     this.latitude,
     this.longitude,
+    this.services = const [],
+    this.workingHours = const [],
   });
 
   factory Provider.fromJson(Map<String, dynamic> json) {
@@ -29,6 +36,14 @@ class Provider {
       postalCode: json['postalCode'] ?? '',
       latitude: json['latitude'] != null ? (json['latitude'] as num).toDouble() : null,
       longitude: json['longitude'] != null ? (json['longitude'] as num).toDouble() : null,
+      services: (json['services'] as List<dynamic>?)
+              ?.map((e) => Service.fromJson(e))
+              .toList() ??
+          [],
+      workingHours: (json['workingHours'] as List<dynamic>?)
+              ?.map((e) => WorkingHours.fromJson(e))
+              .toList() ??
+          [],
     );
   }
 }

@@ -3,7 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 class UserService {
   final Dio _dio = Dio(BaseOptions(
-    baseUrl: 'http://localhost:3000', // 10.0.2.2 for emulator
+    baseUrl: 'http://192.168.1.111:3000', // Changed from localhost to LAN IP for mobile access
     connectTimeout: const Duration(seconds: 5),
     receiveTimeout: const Duration(seconds: 3),
   ));

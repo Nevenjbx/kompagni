@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/auth_service.dart';
-import '../services/user_service.dart';
-import 'provider_list_screen.dart';
+import '../../../shared/services/user_service.dart';
+import '../../client/screens/home_client.dart';
 import 'signup_screen.dart';
-import 'provider_dashboard_screen.dart';
+import '../../provider/screens/provider_dashboard_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -69,7 +69,7 @@ class _LoginScreenState extends State<LoginScreen> {
           );
         } else {
           Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (context) => const ProviderListScreen()),
+            MaterialPageRoute(builder: (context) => const HomeClientScreen()),
           );
         }
       }

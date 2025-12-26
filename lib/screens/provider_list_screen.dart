@@ -23,7 +23,7 @@ class _ProviderListScreenState extends State<ProviderListScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Kompagni Providers'),
+        title: const Text('Prestataires Kompagni'),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -47,7 +47,7 @@ class _ProviderListScreenState extends State<ProviderListScreen> {
                 children: [
                   const Icon(Icons.error_outline, size: 48, color: Colors.red),
                   const SizedBox(height: 16),
-                  Text('Error: ${snapshot.error}'),
+                  Text('Erreur : ${snapshot.error}'),
                   const SizedBox(height: 16),
                   ElevatedButton(
                     onPressed: () {
@@ -55,13 +55,13 @@ class _ProviderListScreenState extends State<ProviderListScreen> {
                         _providersFuture = _providerService.searchProviders();
                       });
                     },
-                    child: const Text('Retry'),
+                    child: const Text('Réessayer'),
                   ),
                 ],
               ),
             );
           } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return const Center(child: Text('No providers found.'));
+            return const Center(child: Text('Aucun prestataire trouvé.'));
           }
 
           final providers = snapshot.data!;

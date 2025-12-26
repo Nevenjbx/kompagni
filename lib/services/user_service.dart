@@ -8,14 +8,22 @@ class UserService {
     receiveTimeout: const Duration(seconds: 3),
   ));
 
-  Future<void> syncUser({required String role}) async {
+  Future<void> syncUser({
+    required String role,
+    String? name,
+    Map<String, dynamic>? providerProfile,
+  }) async {
     final session = Supabase.instance.client.auth.currentSession;
     if (session == null) throw Exception('Not authenticated');
 
     try {
       await _dio.post(
         '/users/sync',
-        data: {'role': role},
+        data: {
+          'role': role,
+          'name': name,
+          'providerProfile': providerProfile,
+        },
         options: Options(
           headers: {
             'Authorization': 'Bearer ${session.accessToken}',

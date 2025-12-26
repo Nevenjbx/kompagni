@@ -19,6 +19,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
+  bool _obscureText = true; // State for password visibility
   String? _errorMessage;
 
   @override
@@ -39,7 +40,7 @@ class _LoginScreenState extends State<LoginScreen> {
       final password = _passwordController.text.trim();
 
       if (email.isEmpty || password.isEmpty) {
-        throw const AuthException('Please fill in all fields');
+        throw const AuthException('Veuillez remplir tous les champs');
       }
 
       await _authService.signInEmailPassword(email, password);
@@ -47,10 +48,15 @@ class _LoginScreenState extends State<LoginScreen> {
       // Fetch user profile from backend
       Map<String, dynamic>? userProfile = await _userService.getCurrentUser();
 
-      // If profile doesn't exist locally (data mismatch), sync as CLIENT by default
+      // If profile doesn't exist locally (data mismatch), try to sync
       if (userProfile == null) {
-        await _userService.syncUser(role: 'CLIENT');
-        userProfile = {'role': 'CLIENT'};
+        // Try to recover role from user metadata
+        final user = _authService.currentUser;
+        final metadataRole = user?.userMetadata?['role'];
+        final roleToSync = metadataRole?.toString() ?? 'CLIENT';
+        
+        await _userService.syncUser(role: roleToSync);
+        userProfile = {'role': roleToSync};
       }
 
       final role = userProfile['role'];
@@ -74,7 +80,7 @@ class _LoginScreenState extends State<LoginScreen> {
     } catch (e) {
       debugPrint('Login Error: $e'); // Print error to console
       setState(() {
-        _errorMessage = 'An unexpected error occurred: $e'; // Show error details in UI for now
+        _errorMessage = 'Une erreur inattendue est survenue: $e'; // Show error details in UI for now
       });
     } finally {
       if (mounted) {
@@ -88,7 +94,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Login')),
+      appBar: AppBar(title: const Text('Connexion')),
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
@@ -119,12 +125,22 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 16),
               TextField(
                 controller: _passwordController,
-                decoration: const InputDecoration(
-                  labelText: 'Password',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.lock),
+                decoration: InputDecoration(
+                  labelText: 'Mot de passe',
+                  border: const OutlineInputBorder(),
+                  prefixIcon: const Icon(Icons.lock),
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _obscureText ? Icons.visibility : Icons.visibility_off,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _obscureText = !_obscureText;
+                      });
+                    },
+                  ),
                 ),
-                obscureText: true,
+                obscureText: _obscureText,
               ),
               const SizedBox(height: 24),
               ElevatedButton(
@@ -138,7 +154,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         width: 20,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Text('Sign In'),
+                    : const Text('Se connecter'),
               ),
               const SizedBox(height: 16),
               TextButton(
@@ -147,7 +163,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     MaterialPageRoute(builder: (context) => const SignUpScreen()),
                   );
                 },
-                child: const Text('Create an Account'),
+                child: const Text('Créer un compte'),
               ),
             ],
           ),

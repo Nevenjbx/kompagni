@@ -10,10 +10,11 @@ class AuthService {
     );
   }
 
-  Future<AuthResponse> signUpEmailPassword(String email, String password) async {
+  Future<AuthResponse> signUpEmailPassword(String email, String password, {Map<String, dynamic>? data}) async {
     return await _supabase.auth.signUp(
       email: email,
       password: password,
+      data: data,
     );
   }
 

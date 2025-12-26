@@ -19,7 +19,7 @@ class ProviderDashboardScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Provider Dashboard'),
+        title: const Text('Tableau de bord'),
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
@@ -34,7 +34,7 @@ class ProviderDashboardScreen extends StatelessWidget {
             const Icon(Icons.store, size: 80, color: Colors.deepPurple),
             const SizedBox(height: 24),
             const Text(
-              'Welcome Provider!',
+              'Bienvenue Prestataire !',
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 32),
@@ -42,7 +42,7 @@ class ProviderDashboardScreen extends StatelessWidget {
               onPressed: () {
                 // TODO: Navigate to Add Service Screen
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Add Service clicked')),
+                  const SnackBar(content: Text('Bouton Ajout Service cliqué')),
                 );
               },
               icon: const Icon(Icons.add),

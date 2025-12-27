@@ -1,11 +1,12 @@
 import 'package:dio/dio.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide Provider;
+import '../../../core/config/environment_config.dart';
 import '../../../shared/models/working_hours.dart';
 import '../../../shared/models/provider.dart';
 
 class ProviderService {
   final Dio _dio = Dio(BaseOptions(
-    baseUrl: 'http://192.168.1.111:3000', // Adjust for Android Emulator: 10.0.2.2
+    baseUrl: EnvironmentConfig.apiUrl,
     connectTimeout: const Duration(seconds: 5),
     receiveTimeout: const Duration(seconds: 3),
   ));

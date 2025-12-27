@@ -1,10 +1,11 @@
 import 'package:dio/dio.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../core/config/environment_config.dart';
 import '../../../shared/models/pet.dart';
 
 class PetService {
   final Dio _dio = Dio(BaseOptions(
-    baseUrl: 'http://192.168.1.111:3000', // LAN IP
+    baseUrl: EnvironmentConfig.apiUrl,
     connectTimeout: const Duration(seconds: 5),
     receiveTimeout: const Duration(seconds: 3),
   ));

@@ -174,6 +174,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.person),
                 ),
+                textInputAction: TextInputAction.next,
               ),
               const SizedBox(height: 16),
               TextField(
@@ -184,6 +185,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   prefixIcon: Icon(Icons.email),
                 ),
                 keyboardType: TextInputType.emailAddress,
+                autofillHints: const [AutofillHints.email],
+                textInputAction: TextInputAction.next,
               ),
               const SizedBox(height: 16),
               TextField(
@@ -204,6 +207,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   ),
                 ),
                 obscureText: _obscurePassword,
+                textInputAction: TextInputAction.next,
               ),
               const SizedBox(height: 16),
               TextField(
@@ -226,6 +230,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   ),
                 ),
                 obscureText: _obscureConfirmPassword,
+                textInputAction: _isProvider ? TextInputAction.next : TextInputAction.done,
+                onSubmitted: _isProvider ? null : (_) => _signUp(),
               ),
               const SizedBox(height: 16),
               CheckboxListTile(
@@ -250,6 +256,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     border: OutlineInputBorder(),
                     prefixIcon: Icon(Icons.business),
                   ),
+                  textInputAction: TextInputAction.next,
                 ),
                 const SizedBox(height: 16),
                 TextField(
@@ -260,6 +267,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     prefixIcon: Icon(Icons.description),
                   ),
                   maxLines: 3,
+                  textInputAction: TextInputAction.newline,
                 ),
                 const SizedBox(height: 16),
                 TextField(
@@ -269,6 +277,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     border: OutlineInputBorder(),
                     prefixIcon: Icon(Icons.location_on),
                   ),
+                  textInputAction: TextInputAction.next,
                 ),
                 const SizedBox(height: 16),
                 Row(
@@ -281,6 +290,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           border: OutlineInputBorder(),
                           prefixIcon: Icon(Icons.location_city),
                         ),
+                        textInputAction: TextInputAction.next,
                       ),
                     ),
                     const SizedBox(width: 16),
@@ -292,6 +302,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           border: OutlineInputBorder(),
                           prefixIcon: Icon(Icons.map),
                         ),
+                        textInputAction: TextInputAction.done,
+                        onSubmitted: (_) => _signUp(),
                       ),
                     ),
                   ],

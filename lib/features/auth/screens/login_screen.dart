@@ -121,6 +121,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   prefixIcon: Icon(Icons.email),
                 ),
                 keyboardType: TextInputType.emailAddress,
+                autofillHints: const [AutofillHints.email],
+                textInputAction: TextInputAction.next,
               ),
               const SizedBox(height: 16),
               TextField(
@@ -141,6 +143,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 obscureText: _obscureText,
+                textInputAction: TextInputAction.done,
+                onSubmitted: (_) => _signIn(),
               ),
               const SizedBox(height: 24),
               ElevatedButton(

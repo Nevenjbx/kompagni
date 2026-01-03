@@ -12,7 +12,9 @@ class UserService {
   Future<void> syncUser({
     required String role,
     String? name,
+    String? phoneNumber,
     Map<String, dynamic>? providerProfile,
+    List<String>? tags,
   }) async {
     final session = Supabase.instance.client.auth.currentSession;
     if (session == null) throw Exception('Not authenticated');
@@ -23,7 +25,10 @@ class UserService {
         data: {
           'role': role,
           'name': name,
-          'providerProfile': providerProfile,
+          'phoneNumber': phoneNumber,
+          'providerProfile': providerProfile != null 
+              ? {...providerProfile, 'tags': tags}
+              : null,
         },
         options: Options(
           headers: {
@@ -58,6 +63,43 @@ class UserService {
     } catch (e) {
       // If 404 or other error, return null to trigger sync
       return null;
+    }
+  }
+
+  Future<void> updateUser(Map<String, dynamic> data) async {
+    final session = Supabase.instance.client.auth.currentSession;
+    if (session == null) throw Exception('Not authenticated');
+
+    try {
+      await _dio.patch(
+        '/users/me',
+        data: data,
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer ${session.accessToken}',
+          },
+        ),
+      );
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<void> deleteAccount() async {
+    final session = Supabase.instance.client.auth.currentSession;
+    if (session == null) throw Exception('Not authenticated');
+
+    try {
+      await _dio.delete(
+        '/users/me',
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer ${session.accessToken}',
+          },
+        ),
+      );
+    } catch (e) {
+      rethrow;
     }
   }
 }

@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:intl_phone_field/intl_phone_field.dart';
+import 'package:intl_phone_field/countries.dart';
+import 'package:flutter_typeahead/flutter_typeahead.dart';
+import '../../../shared/services/address_service.dart';
 import '../services/auth_service.dart';
 import '../../../shared/services/user_service.dart';
-import '../../client/screens/home_client.dart';
-import '../../provider/screens/provider_dashboard_screen.dart';
+import '../../client/screens/add_pet_screen.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -15,32 +18,54 @@ class SignUpScreen extends StatefulWidget {
 class _SignUpScreenState extends State<SignUpScreen> {
   final AuthService _authService = AuthService();
   final UserService _userService = UserService();
+  final AddressService _addressService = AddressService();
+  
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-  final _nameController = TextEditingController();
+  final _firstNameController = TextEditingController();
+  final _lastNameController = TextEditingController();
   
   // Provider fields
   final _businessNameController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _addressController = TextEditingController();
+  final _addressComplementController = TextEditingController();
   final _cityController = TextEditingController();
   final _postalCodeController = TextEditingController();
+  
+  String? _phoneNumber;
+  double? _latitude;
+  double? _longitude;
   bool _isLoading = false;
   bool _isProvider = false;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   String? _errorMessage;
 
+  final List<String> _availableTags = [
+    'Toiletteur',
+    'Vétérinaire',
+    'Pension',
+    'Promenade',
+    'Chien',
+    'Chat',
+    'Éducation',
+    'Garde a domicile'
+  ];
+  final List<String> _selectedTags = [];
+
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
-    _nameController.dispose();
+    _firstNameController.dispose();
+    _lastNameController.dispose();
     _businessNameController.dispose();
     _descriptionController.dispose();
     _addressController.dispose();
+    _addressComplementController.dispose();
     _cityController.dispose();
     _postalCodeController.dispose();
     super.dispose();
@@ -66,25 +91,37 @@ class _SignUpScreenState extends State<SignUpScreen> {
       }
 
       // Collect data
-      final name = _nameController.text.trim();
+      final firstName = _firstNameController.text.trim();
+      final lastName = _lastNameController.text.trim();
+      
+      if (firstName.isEmpty || lastName.isEmpty) {
+        throw const AuthException('Veuillez entrer votre prénom et votre nom');
+      }
+
+      final name = '$firstName $lastName';
       
       Map<String, dynamic>? providerProfile;
       if (_isProvider) {
         final businessName = _businessNameController.text.trim();
-        final address = _addressController.text.trim();
+        final addressLine1 = _addressController.text.trim();
+        final addressLine2 = _addressComplementController.text.trim();
         final city = _cityController.text.trim();
         final postalCode = _postalCodeController.text.trim();
         
-        if (businessName.isEmpty || address.isEmpty || city.isEmpty || postalCode.isEmpty) {
+        if (businessName.isEmpty || addressLine1.isEmpty || city.isEmpty || postalCode.isEmpty) {
           throw const AuthException('Veuillez remplir tous les détails du prestataire');
         }
+
+        final fullAddress = addressLine2.isNotEmpty ? '$addressLine1, $addressLine2' : addressLine1;
 
         providerProfile = {
           'businessName': businessName,
           'description': _descriptionController.text.trim(),
-          'address': address,
+          'address': fullAddress,
           'city': city,
           'postalCode': postalCode,
+          'latitude': _latitude,
+          'longitude': _longitude,
         };
       }
 
@@ -104,18 +141,43 @@ class _SignUpScreenState extends State<SignUpScreen> {
           await _userService.syncUser(
             role: _isProvider ? 'PROVIDER' : 'CLIENT',
             name: name,
+            phoneNumber: _phoneNumber,
             providerProfile: providerProfile,
+            tags: _isProvider ? _selectedTags : null,
           );
 
           if (mounted) {
-            Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(
-                builder: (context) => _isProvider
-                    ? const ProviderDashboardScreen()
-                    : const HomeClientScreen(),
-              ),
-              (route) => false,
-            );
+            if (_isProvider) {
+              // GoRouter authentication listener will handle redirect to Dashboard
+    if (mounted) {
+       // Optional: success message
+    }
+            } else {
+              // For Clients: Show popup to add pet
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (context) => AlertDialog(
+                  title: const Text('Bienvenue sur Kompagni !'),
+                  content: const Text('Voulez-vous ajouter un animal de compagnie maintenant ?'),
+                  actions: [
+                    TextButton(
+                      onPressed: () {
+                        // GoRouter redirect to Home.
+                        // TODO: Re-implement onboarding flow (Add Pet) via checking pet count on Home.
+                      },
+                      child: const Text('Plus tard'),
+                    ),
+                    FilledButton(
+                      onPressed: () {
+                         // TODO: Re-implement Add Pet flow
+                      },
+                      child: const Text('Ajouter'),
+                    ),
+                  ],
+                ),
+              );
+            }
           }
         } else {
           // Otherwise, ask user to confirm email
@@ -167,14 +229,76 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     textAlign: TextAlign.center,
                   ),
                 ),
-              TextField(
-                controller: _nameController,
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _lastNameController,
+                      decoration: const InputDecoration(
+                        labelText: 'Nom',
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.person),
+                      ),
+                      textInputAction: TextInputAction.next,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: TextField(
+                      controller: _firstNameController,
+                      decoration: const InputDecoration(
+                        labelText: 'Prénom',
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.person_outline),
+                      ),
+                      textInputAction: TextInputAction.next,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              IntlPhoneField(
                 decoration: const InputDecoration(
-                  labelText: 'Nom complet',
+                  labelText: 'Numéro de téléphone',
                   border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.person),
                 ),
-                textInputAction: TextInputAction.next,
+                initialCountryCode: 'FR',
+                countries: const [
+                  Country(
+                    name: "France",
+                    nameTranslations: {
+                      "sk": "Francúzsko",
+                      "se": "Frankriika",
+                      "pl": "Francja",
+                      "no": "Frankrike",
+                      "ja": "フランス",
+                      "it": "Francia",
+                      "zh": "法国",
+                      "nl": "Frankrijk",
+                      "de": "Frankreich",
+                      "fr": "France",
+                      "es": "Francia",
+                      "en": "France",
+                      "pt_BR": "França",
+                      "sr-Cyrl": "Француска",
+                      "sr-Latn": "Francuska",
+                      "zh_TW": "法國",
+                      "tr": "Fransa",
+                      "ro": "Franța",
+                      "ar": "فرنسا",
+                      "fa": "فرانسه",
+                      "yue": "法國"
+                    },
+                    flag: "🇫🇷",
+                    code: "FR",
+                    dialCode: "33",
+                    minLength: 9,
+                    maxLength: 9,
+                  ),
+                ],
+                onChanged: (phone) {
+                  _phoneNumber = phone.completeNumber;
+                },
               ),
               const SizedBox(height: 16),
               TextField(
@@ -270,12 +394,45 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   textInputAction: TextInputAction.newline,
                 ),
                 const SizedBox(height: 16),
-                TextField(
+                TypeAheadField<AddressResult>(
                   controller: _addressController,
+                  builder: (context, controller, focusNode) {
+                    return TextField(
+                      controller: controller,
+                      focusNode: focusNode,
+                      decoration: const InputDecoration(
+                        labelText: 'Adresse',
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.location_on),
+                      ),
+                    );
+                  },
+                  suggestionsCallback: (pattern) async {
+                    return await _addressService.searchAddress(pattern);
+                  },
+                  itemBuilder: (context, suggestion) {
+                    return ListTile(
+                      leading: const Icon(Icons.location_on),
+                      title: Text(suggestion.displayName),
+                    );
+                  },
+                  onSelected: (suggestion) {
+                    _addressController.text = suggestion.street;
+                    _cityController.text = suggestion.city;
+                    _postalCodeController.text = suggestion.postalCode;
+                    setState(() {
+                      _latitude = suggestion.lat;
+                      _longitude = suggestion.lon;
+                    });
+                  },
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _addressComplementController,
                   decoration: const InputDecoration(
-                    labelText: 'Adresse',
+                    labelText: 'Complément d\'adresse (batiment, etc.) Optionnel',
                     border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.location_on),
+                    prefixIcon: Icon(Icons.add_location_alt),
                   ),
                   textInputAction: TextInputAction.next,
                 ),
@@ -307,6 +464,29 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       ),
                     ),
                   ],
+                ),
+                const SizedBox(height: 16),
+                const Text('Services proposés (Tags)', style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8.0,
+                  runSpacing: 4.0,
+                  children: _availableTags.map((tag) {
+                    final isSelected = _selectedTags.contains(tag);
+                    return FilterChip(
+                      label: Text(tag),
+                      selected: isSelected,
+                      onSelected: (bool selected) {
+                        setState(() {
+                          if (selected) {
+                            _selectedTags.add(tag);
+                          } else {
+                            _selectedTags.remove(tag);
+                          }
+                        });
+                      },
+                    );
+                  }).toList(),
                 ),
               ],
               const SizedBox(height: 24),

@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/auth_service.dart';
 import '../../../shared/services/user_service.dart';
-import '../../client/screens/home_client.dart';
 import 'signup_screen.dart';
-import '../../provider/screens/provider_dashboard_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -61,17 +59,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
       final role = userProfile['role'];
 
+      // Manual navigation removed. GoRouter's auth listener handles redirection.
       if (mounted) {
-        // Navigate based on role
-        if (role == 'PROVIDER') {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (context) => const ProviderDashboardScreen()),
-          );
-        } else {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (context) => const HomeClientScreen()),
-          );
-        }
+         // Optionally show a success snackbar or just wait for redirect
       }
     } on AuthException catch (e) {
       setState(() {

@@ -14,10 +14,8 @@ class _ManageAvailabilityScreenState extends State<ManageAvailabilityScreen> {
   bool _isLoading = false;
 
   // Initialize with default 9-5 MF
-  final List<WorkingHours> _workingHours = List.generate(7, (index) {
-    // 0=Sunday in backend usually? Backend uses dayjs().day() which is 0=Sunday, 1=Monday.
-    // Let's assume user wants to edit Monday(1) to Sunday(0).
-    // Let's list Mon-Sun for UI, but keep dayOfWeek correct.
+  // Initialize with default 9-5 MF
+  List<WorkingHours> _workingHours = List.generate(7, (index) {
     return WorkingHours(
       dayOfWeek: index, // 0=Sun, 1=Mon, ..., 6=Sat.
       startTime: '09:00',
@@ -25,6 +23,72 @@ class _ManageAvailabilityScreenState extends State<ManageAvailabilityScreen> {
       isClosed: index == 0 || index == 6, // Close weekends by default
     );
   });
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    setState(() => _isLoading = true);
+    try {
+      final provider = await _providerService.getMyProfile();
+      if (mounted) {
+        setState(() {
+          // Merge fetched hours into default structure
+          // The backend might return only open days or all days depending on implementation.
+          // Usually "updateWorkingHours" sends only open days.
+          // We iterate over our default 7 days list and update if we find a match.
+          
+          // First, reset all to closed if we assume backend returns *only* open days?
+          // Or backend returns all?
+          // ProviderService.updateWorkingHours sends ".where((wh) => !wh.isClosed)".
+          // So backend likely stores only non-closed hours.
+          // Therefore, any day NOT in the response should be considered closed.
+          
+          // Reset all to closed first to be safe, or just update matches.
+          // Better approach:
+          // 1. Create a map of fetched hours by dayOfWeek.
+          // 2. Iterate 0..6. If in map, use it (isClosed=false). If not, use default (isClosed=true).
+          
+          final fetchedMap = {
+            for (var wh in provider.workingHours) wh.dayOfWeek: wh
+          };
+          
+          _workingHours = List.generate(7, (index) {
+             final existing = fetchedMap[index];
+             if (existing != null) {
+               return WorkingHours(
+                 dayOfWeek: index,
+                 startTime: existing.startTime,
+                 endTime: existing.endTime,
+                 isClosed: false,
+                 breakStartTime: existing.breakStartTime,
+                 breakEndTime: existing.breakEndTime,
+               );
+             } else {
+               // Not in DB -> Closed
+               return WorkingHours(
+                 dayOfWeek: index,
+                 startTime: '09:00',
+                 endTime: '17:00',
+                 isClosed: true,
+               );
+             }
+          });
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur lors du chargement: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
 
   Future<void> _save() async {
     setState(() => _isLoading = true);

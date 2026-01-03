@@ -61,4 +61,55 @@ class ServiceService {
       rethrow;
     }
   }
+
+  Future<void> updateService({
+    required String id,
+    required String name,
+    required String? description,
+    required int duration,
+    required double price,
+    required String animalType,
+  }) async {
+    final session = Supabase.instance.client.auth.currentSession;
+    if (session == null) throw Exception('Not authenticated');
+
+    try {
+      await _dio.patch(
+        '/services/$id',
+        data: {
+          'name': name,
+          'description': description,
+          'duration': duration,
+          'price': price,
+          'animalType': animalType,
+        },
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer ${session.accessToken}',
+          },
+        ),
+      );
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<void> deleteService(String id) async {
+    final session = Supabase.instance.client.auth.currentSession;
+    if (session == null) throw Exception('Not authenticated');
+
+    try {
+      await _dio.delete(
+        '/services/$id',
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer ${session.accessToken}',
+          },
+        ),
+      );
+    } catch (e) {
+      rethrow;
+    }
+  }
+
 }

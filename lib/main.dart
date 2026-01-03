@@ -1,31 +1,42 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'features/auth/screens/login_screen.dart';
+import 'package:intl/date_symbol_data_local.dart';
+import 'router/app_router.dart';
+import 'core/config/environment_config.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await Supabase.initialize(
-    url: 'https://kgdaaumpgtcdhkwomzdk.supabase.co',
-    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtnZGFhdW1wZ3RjZGhrd29temRrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMzMjY3NTcsImV4cCI6MjA3ODY4Njc1N30.AOG6k2ZA5zX9bty-8bYZDj7iLzJGf7eGR4ZFZ07cDAY',
+    url: EnvironmentConfig.supabaseUrl,
+    anonKey: EnvironmentConfig.supabaseAnonKey,
   );
 
-  runApp(const MyApp());
+  await initializeDateFormatting('fr_FR', null);
+
+  runApp(
+    const ProviderScope(
+      child: MyApp(),
+    ),
+  );
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends ConsumerWidget {
   const MyApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
+  Widget build(BuildContext context, WidgetRef ref) {
+    final router = ref.watch(routerProvider);
+
+    return MaterialApp.router(
       debugShowCheckedModeBanner: false,
       title: 'Kompagni',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: const LoginScreen(),
+      routerConfig: router,
     );
   }
 }

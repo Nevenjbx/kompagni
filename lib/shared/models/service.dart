@@ -5,6 +5,7 @@ class Service {
   final String? description;
   final int duration;
   final double price;
+  final String animalType;
 
   Service({
     required this.id,
@@ -13,6 +14,7 @@ class Service {
     this.description,
     required this.duration,
     required this.price,
+    this.animalType = 'DOG',
   });
 
   factory Service.fromJson(Map<String, dynamic> json) {
@@ -23,6 +25,7 @@ class Service {
       description: json['description'],
       duration: json['duration'] is int ? json['duration'] : int.parse(json['duration'].toString()),
       price: json['price'] is double ? json['price'] : double.parse(json['price'].toString()),
+      animalType: json['animalType'] ?? 'DOG',
     );
   }
 }

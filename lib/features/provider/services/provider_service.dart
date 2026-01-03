@@ -1,5 +1,5 @@
 import 'package:dio/dio.dart';
-import 'package:supabase_flutter/supabase_flutter.dart' hide Provider;
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/config/environment_config.dart';
 import '../../../shared/models/working_hours.dart';
 import '../../../shared/models/provider.dart';
@@ -73,6 +73,25 @@ class ProviderService {
       } else {
         throw Exception('Failed to load profile');
       }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<void> updateProfile(Map<String, dynamic> data) async {
+    final session = Supabase.instance.client.auth.currentSession;
+    if (session == null) throw Exception('Not authenticated');
+
+    try {
+      await _dio.patch(
+        '/providers/me',
+        data: data,
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer ${session.accessToken}',
+          },
+        ),
+      );
     } catch (e) {
       rethrow;
     }

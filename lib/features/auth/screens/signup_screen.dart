@@ -6,9 +6,7 @@ import 'package:flutter_typeahead/flutter_typeahead.dart';
 import '../../../shared/services/address_service.dart';
 import '../services/auth_service.dart';
 import '../../../shared/services/user_service.dart';
-import '../../client/screens/home_client.dart';
 import '../../client/screens/add_pet_screen.dart';
-import '../../provider/screens/provider_dashboard_screen.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -150,12 +148,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
           if (mounted) {
             if (_isProvider) {
-              Navigator.of(context).pushAndRemoveUntil(
-                MaterialPageRoute(
-                  builder: (context) => const ProviderDashboardScreen(),
-                ),
-                (route) => false,
-              );
+              // GoRouter authentication listener will handle redirect to Dashboard
+    if (mounted) {
+       // Optional: success message
+    }
             } else {
               // For Clients: Show popup to add pet
               showDialog(
@@ -167,30 +163,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   actions: [
                     TextButton(
                       onPressed: () {
-                        // Skip: Go to Home
-                        Navigator.of(context).pushAndRemoveUntil(
-                          MaterialPageRoute(
-                            builder: (context) => const HomeClientScreen(),
-                          ),
-                          (route) => false,
-                        );
+                        // GoRouter redirect to Home.
+                        // TODO: Re-implement onboarding flow (Add Pet) via checking pet count on Home.
                       },
                       child: const Text('Plus tard'),
                     ),
                     FilledButton(
                       onPressed: () {
-                        // Add: Go to Home (base) then Add Pet
-                        Navigator.of(context).pushAndRemoveUntil(
-                          MaterialPageRoute(
-                            builder: (context) => const HomeClientScreen(),
-                          ),
-                          (route) => false,
-                        );
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) => const AddPetScreen(),
-                          ),
-                        );
+                         // TODO: Re-implement Add Pet flow
                       },
                       child: const Text('Ajouter'),
                     ),

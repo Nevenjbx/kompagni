@@ -65,4 +65,41 @@ class UserService {
       return null;
     }
   }
+
+  Future<void> updateUser(Map<String, dynamic> data) async {
+    final session = Supabase.instance.client.auth.currentSession;
+    if (session == null) throw Exception('Not authenticated');
+
+    try {
+      await _dio.patch(
+        '/users/me',
+        data: data,
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer ${session.accessToken}',
+          },
+        ),
+      );
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<void> deleteAccount() async {
+    final session = Supabase.instance.client.auth.currentSession;
+    if (session == null) throw Exception('Not authenticated');
+
+    try {
+      await _dio.delete(
+        '/users/me',
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer ${session.accessToken}',
+          },
+        ),
+      );
+    } catch (e) {
+      rethrow;
+    }
+  }
 }

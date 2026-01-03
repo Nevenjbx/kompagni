@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import '../../../shared/models/provider.dart';
 import '../../provider/services/provider_service.dart';
 import '../../auth/services/auth_service.dart';
-import '../../auth/screens/login_screen.dart';
 import 'provider_details_screen.dart';
 import 'my_appointments_screen.dart';
 import 'my_pets_screen.dart';
+import 'add_pet_screen.dart';
+import '../../client/services/pet_service.dart';
 
 class HomeClientScreen extends StatefulWidget {
   const HomeClientScreen({super.key});
@@ -22,15 +23,53 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
   void initState() {
     super.initState();
     _providersFuture = _providerService.searchProviders();
+    _checkPets();
+  }
+
+  Future<void> _checkPets() async {
+    // Small delay to allow initial build
+    await Future.delayed(const Duration(milliseconds: 500));
+    try {
+      final pets = await PetService().getMyPets();
+      if (pets.isEmpty && mounted) {
+        _showAddPetDialog();
+      }
+    } catch (e) {
+      // Fail silently for onboarding check
+    }
+  }
+
+  void _showAddPetDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Text('Bienvenue sur Kompagni !'),
+        content: const Text('Commençons par créer le profil de votre compagnon.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Plus tard'),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (context) => const AddPetScreen()),
+              );
+            },
+            child: const Text('Ajouter maintenant'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _signOut() async {
     await AuthService().signOut();
+    // Navigation handled by GoRouter stream
     if (mounted) {
-       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (context) => const LoginScreen()),
-        (route) => false,
-      );
+       // Optional: show snackbar
     }
   }
 

@@ -12,7 +12,9 @@ class UserService {
   Future<void> syncUser({
     required String role,
     String? name,
+    String? phoneNumber,
     Map<String, dynamic>? providerProfile,
+    List<String>? tags,
   }) async {
     final session = Supabase.instance.client.auth.currentSession;
     if (session == null) throw Exception('Not authenticated');
@@ -23,7 +25,10 @@ class UserService {
         data: {
           'role': role,
           'name': name,
-          'providerProfile': providerProfile,
+          'phoneNumber': phoneNumber,
+          'providerProfile': providerProfile != null 
+              ? {...providerProfile, 'tags': tags}
+              : null,
         },
         options: Options(
           headers: {

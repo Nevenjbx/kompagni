@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
-import '../../../shared/models/provider.dart';
-import '../../provider/services/provider_service.dart';
+import 'package:intl/intl.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../auth/services/auth_service.dart';
-import 'provider_details_screen.dart';
-import 'my_appointments_screen.dart';
-import 'my_pets_screen.dart';
+import '../services/appointment_service.dart';
+import '../services/pet_service.dart';
 import 'add_pet_screen.dart';
-import '../../client/services/pet_service.dart';
+import 'provider_list_screen.dart';
 
 class HomeClientScreen extends StatefulWidget {
   const HomeClientScreen({super.key});
@@ -16,18 +15,25 @@ class HomeClientScreen extends StatefulWidget {
 }
 
 class _HomeClientScreenState extends State<HomeClientScreen> {
-  final ProviderService _providerService = ProviderService();
-  late Future<List<Provider>> _providersFuture;
+  final AppointmentService _appointmentService = AppointmentService();
+  late Future<List<dynamic>> _appointmentsFuture;
+  User? _user;
 
   @override
   void initState() {
     super.initState();
-    _providersFuture = _providerService.searchProviders();
+    _user = AuthService().currentUser;
+    _refreshAppointments();
     _checkPets();
   }
 
+  void _refreshAppointments() {
+    setState(() {
+      _appointmentsFuture = _appointmentService.getMyAppointments();
+    });
+  }
+
   Future<void> _checkPets() async {
-    // Small delay to allow initial build
     await Future.delayed(const Duration(milliseconds: 500));
     try {
       final pets = await PetService().getMyPets();
@@ -35,7 +41,7 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
         _showAddPetDialog();
       }
     } catch (e) {
-      // Fail silently for onboarding check
+      // Fail silently
     }
   }
 
@@ -65,104 +71,294 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
     );
   }
 
-  Future<void> _signOut() async {
-    await AuthService().signOut();
-    // Navigation handled by GoRouter stream
-    if (mounted) {
-       // Optional: show snackbar
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
+    // Attempt to get name from metadata, fallback to email or 'Compagnon'
+    final String displayName = _user?.userMetadata?['first_name'] ?? 
+                             _user?.userMetadata?['full_name'] ?? 
+                             'Compagnon';
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Prestataires Kompagni'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.pets),
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (context) => const MyPetsScreen()),
-              );
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.calendar_month),
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (context) => const MyAppointmentsScreen()),
-              );
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () {
-              setState(() {
-                _providersFuture = _providerService.searchProviders();
-              });
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: _signOut,
-          ),
-        ],
-      ),
-      body: FutureBuilder<List<Provider>>(
-        future: _providersFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          } else if (snapshot.hasError) {
-            return Center(
+      body: SafeArea(
+        child: RefreshIndicator(
+          onRefresh: () async => _refreshAppointments(),
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            child: Padding(
+              padding: const EdgeInsets.all(20.0),
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Icon(Icons.error_outline, size: 48, color: Colors.red),
-                  const SizedBox(height: 16),
-                  Text('Erreur : ${snapshot.error}'),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: () {
-                      setState(() {
-                        _providersFuture = _providerService.searchProviders();
-                      });
-                    },
-                    child: const Text('Réessayer'),
+                   // Header
+                  _buildHeader(displayName),
+                  const SizedBox(height: 32),
+
+                  // Next Appointment
+                  const Text(
+                    'Prochain rdv',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
+                  const SizedBox(height: 12),
+                  _buildNextAppointmentSection(),
+                  const SizedBox(height: 32),
+
+                  // Main Button
+                  SizedBox(
+                    height: 56,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => const ProviderListScreen(),
+                          ),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Theme.of(context).primaryColor,
+                        foregroundColor: Colors.white,
+                        textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                      child: const Text('Prendre rendez-vous'),
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+
+                  // Appointment History
+                   const Text(
+                    'Historique des rdv',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 12),
+                  _buildHistorySection(),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader(String name) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          'Bonjour $name',
+          style: const TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        IconButton(
+          onPressed: () {
+            showDialog(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                title: const Text('Fonctionnalité à venir'),
+                content: const Text('La modification du profil sera bientôt disponible.'),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(ctx).pop(),
+                    child: const Text('OK'),
+                  )
                 ],
               ),
             );
-          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return const Center(child: Text('Aucun prestataire trouvé.'));
-          }
+          },
+          icon: const CircleAvatar(
+             child: Icon(Icons.person),
+          ),
+        ),
+      ],
+    );
+  }
 
-          final providers = snapshot.data!;
-          return ListView.builder(
-            itemCount: providers.length,
-            itemBuilder: (context, index) {
-              final provider = providers[index];
-              return ListTile(
-                leading: CircleAvatar(
-                  child: Text(provider.businessName.isNotEmpty
-                      ? provider.businessName[0].toUpperCase()
-                      : '?'),
-                ),
-                title: Text(provider.businessName),
-                subtitle: Text('${provider.city} • ${provider.description}'),
-                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (context) => ProviderDetailsScreen(provider: provider),
-                    ),
-                  );
-                },
-              );
-            },
+  Widget _buildNextAppointmentSection() {
+    return FutureBuilder<List<dynamic>>(
+      future: _appointmentsFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return Text('Erreur: ${snapshot.error}', style: const TextStyle(color: Colors.red));
+        }
+        
+        final appointments = snapshot.data ?? [];
+        final now = DateTime.now();
+        
+        // Filter for future and not cancelled
+        final upcoming = appointments.where((appt) {
+          final start = DateTime.parse(appt['startTime']);
+          return start.isAfter(now) && appt['status'] != 'CANCELLED';
+        }).toList();
+
+        // Sort by date
+        upcoming.sort((a, b) => DateTime.parse(a['startTime']).compareTo(DateTime.parse(b['startTime'])));
+
+        if (upcoming.isEmpty) {
+          return Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.grey[100],
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Center(
+              child: Text(
+                'Aucun rendez vous réservé',
+                style: TextStyle(color: Colors.grey),
+              ),
+            ),
           );
-        },
+        }
+
+        return ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: upcoming.length,
+          itemBuilder: (context, index) {
+            return _buildAppointmentCard(upcoming[index], isNext: true);
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildHistorySection() {
+     return FutureBuilder<List<dynamic>>(
+      future: _appointmentsFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const SizedBox.shrink(); // Loading already shown in next appt section usually
+        }
+        
+        final appointments = snapshot.data ?? [];
+        final now = DateTime.now();
+        
+        // Filter for past OR cancelled
+        final history = appointments.where((appt) {
+          final start = DateTime.parse(appt['startTime']);
+          return start.isBefore(now) || appt['status'] == 'CANCELLED';
+        }).toList();
+
+        // Sort by date desc
+        history.sort((a, b) => DateTime.parse(b['startTime']).compareTo(DateTime.parse(a['startTime'])));
+
+        if (history.isEmpty) {
+           return const Text('Aucun historique.', style: TextStyle(color: Colors.grey));
+        }
+
+        return ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: history.length > 5 ? 5 : history.length, // Show max 5 recent
+          itemBuilder: (context, index) {
+            return _buildAppointmentCard(history[index]);
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _cancelAppointment(String id) async {
+    try {
+      await _appointmentService.cancelAppointment(id);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Rendez-vous annulé')),
+        );
+      }
+      _refreshAppointments();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur: $e')),
+        );
+      }
+    }
+  }
+
+  void _showAppointmentDetails(dynamic appt) {
+    final provider = appt['provider'];
+    final service = appt['service'];
+    final startTime = DateTime.parse(appt['startTime']);
+    
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Détails du rendez-vous'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Service: ${service['name']}', style: const TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            Text('Prestataire: ${provider['businessName']}'),
+            const SizedBox(height: 8),
+            Text('Date: ${DateFormat('dd/MM/yyyy').format(startTime)}'),
+            Text('Heure: ${DateFormat('HH:mm').format(startTime)}'),
+            const SizedBox(height: 8),
+            Text('Adresse: ${provider['address'] ?? ''}, ${provider['city']}'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Fermer'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              _cancelAppointment(appt['id']);
+            },
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Annuler le rendez-vous'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAppointmentCard(dynamic appt, {bool isNext = false}) {
+    final provider = appt['provider'];
+    final service = appt['service'];
+    final startTime = DateTime.parse(appt['startTime']);
+    final isCancelled = appt['status'] == 'CANCELLED';
+
+    // Enable interaction only for upcoming, non-cancelled appointments
+    final canInteract = isNext && !isCancelled;
+
+    return Card(
+      elevation: isNext ? 4 : 1,
+      margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      color: isNext ? Colors.blue[50] : Colors.white,
+      child: InkWell(
+        onTap: canInteract ? () => _showAppointmentDetails(appt) : null,
+        borderRadius: BorderRadius.circular(12),
+        child: ListTile(
+          title: Text(
+            service['name'],
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(provider['businessName']),
+              Text(DateFormat('dd/MM/yyyy HH:mm').format(startTime)),
+              if (isCancelled)
+                const Text('ANNULÉ', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+            ],
+          ),
+          leading: CircleAvatar(
+             backgroundColor: isNext ? Colors.blue : Colors.grey[300],
+             child: Icon(Icons.calendar_today, color: isNext ? Colors.white : Colors.grey[600]),
+          ),
+        ),
       ),
     );
   }

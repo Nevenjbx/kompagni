@@ -150,25 +150,88 @@ class _ProviderDetailsScreenState extends State<ProviderDetailsScreen> {
                   return const Text('Aucun service disponible.');
                 }
 
-                return Wrap(
-                  spacing: 8.0,
-                  children: snapshot.data!.map((service) {
+                return ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: snapshot.data!.length,
+                  separatorBuilder: (context, index) => const SizedBox(height: 8),
+                  itemBuilder: (context, index) {
+                    final service = snapshot.data![index];
                     final isSelected = _selectedService?.id == service.id;
-                    return ChoiceChip(
-                      label: Text('${service.name} (${service.price}€)'),
-                      selected: isSelected,
-                      onSelected: (selected) {
-                        setState(() {
-                          _selectedService = selected ? service : null;
-                          _selectedSlot = null;
-                          _availableSlots = [];
-                        });
-                        if (selected && _selectedDay != null) {
-                          _fetchAvailableSlots();
-                        }
-                      },
+                    
+                    return Material(
+                      color: isSelected ? Colors.blue[50] : Colors.white,
+                      elevation: 1,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        side: BorderSide(
+                          color: isSelected ? Colors.blue : Colors.transparent,
+                          width: 2,
+                        ),
+                      ),
+                      child: InkWell(
+                        onTap: () {
+                          setState(() {
+                            _selectedService = isSelected ? null : service;
+                            _selectedSlot = null;
+                            _availableSlots = [];
+                          });
+                          if (!isSelected && _selectedDay != null) {
+                            _fetchAvailableSlots();
+                          }
+                        },
+                        borderRadius: BorderRadius.circular(12),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      service.name,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                  ),
+                                  Text(
+                                    '${service.price}€',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                      color: Theme.of(context).primaryColor,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  const Icon(Icons.timer_outlined, size: 16, color: Colors.grey),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '${service.duration} min',
+                                    style: const TextStyle(color: Colors.grey),
+                                  ),
+                                ],
+                              ),
+                              if (service.description != null && service.description!.isNotEmpty) ...[
+                                const SizedBox(height: 8),
+                                Text(
+                                  service.description!,
+                                  style: const TextStyle(color: Colors.black87),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ),
                     );
-                  }).toList(),
+                  },
                 );
               },
             ),

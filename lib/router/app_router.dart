@@ -12,7 +12,7 @@ final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: '/login',
     refreshListenable: _GoRouterRefreshStream(ref.watch(authServiceProvider).authStateChanges),
-     redirect: (context, state) async {
+    redirect: (context, state) async {
        final isLoggedIn = authState.value?.session != null;
        final isLoggingIn = state.uri.path == '/login';
 
@@ -22,20 +22,11 @@ final routerProvider = Provider<GoRouter>((ref) {
 
        if (isLoggingIn && isLoggedIn) {
          // Determine role to redirect correctly
+         // Note: We can't easily wait for FutureProvider here without making this async and potentially slow.
+         // A common pattern is to redirect to a 'loading' or 'splash' page that determines the role.
+         // For now, let's try to read the metadata directly from the user object if available.
          final user = authState.value?.session?.user;
-         
-         // 1. Try metadata first
-         String? role = user?.userMetadata?['role'];
-         
-         // 2. If no role in metadata, it might be an UNSYNCED or slow-sync scenario.
-         // We should verify against the database or trust the metadata if it's there.
-         // For the "Race Condition" fix, if role is null, we can force a fetch or wait.
-         // However, in GoRouter redirect is synchronous-ish or needs to be fast.
-         // The safest fallback is CLIENT if genuinely unknown, or a 'loading' route.
-         // But here, let's assume if it's not PROVIDER, it's CLIENT.
-         
-         // Fix: If role is totally missing, we might want to check if they are in the process of onboarding
-         // but for now, the "UNSYNCED" role from backend might appear here if we refreshed the session.
+         final role = user?.userMetadata?['role'] ?? 'CLIENT';
          
          if (role == 'PROVIDER') {
            return '/provider/dashboard';

@@ -134,25 +134,24 @@ class _SignUpScreenState extends State<SignUpScreen> {
         },
       );
 
+      if (response.session != null) {
+        // Sync user role with backend immediately, regardless of mounting
+        await _userService.syncUser(
+          role: _isProvider ? 'PROVIDER' : 'CLIENT',
+          name: name,
+          phoneNumber: _phoneNumber,
+          providerProfile: providerProfile,
+          tags: _isProvider ? _selectedTags : null,
+        );
+      }
+
       if (mounted) {
         // If email confirmation is off, we might have a session immediately
         if (response.session != null) {
-          // Sync user role with backend
-          await _userService.syncUser(
-            role: _isProvider ? 'PROVIDER' : 'CLIENT',
-            name: name,
-            phoneNumber: _phoneNumber,
-            providerProfile: providerProfile,
-            tags: _isProvider ? _selectedTags : null,
-          );
-
-          if (mounted) {
-            if (_isProvider) {
+          if (_isProvider) {
               // GoRouter authentication listener will handle redirect to Dashboard
-    if (mounted) {
-       // Optional: success message
-    }
-            } else {
+              // But we can show a quick success message if still mounted
+          } else {
               // For Clients: Show popup to add pet
               showDialog(
                 context: context,
@@ -177,7 +176,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   ],
                 ),
               );
-            }
           }
         } else {
           // Otherwise, ask user to confirm email

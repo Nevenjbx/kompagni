@@ -1,32 +1,29 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider;
 import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
+import '../../client/services/appointment_service.dart';
 import '../../auth/services/auth_service.dart';
-import '../../../shared/providers/service_providers.dart';
+import '../services/provider_service.dart';
 import '../../../shared/models/provider.dart';
 import '../../../shared/models/working_hours.dart';
 import 'add_service_screen.dart';
 import 'edit_account_screen.dart';
 
-// Create a provider for dashboard data to handle "loading" states better.
-// We can use a FutureProvider.family or just fetch inside the widget for now, 
-// but sticking to "ref.read" as per remediation plan for services.
-// Ideally, we'd have a `providerDashboardController` but let's do the minimal invasive fix first:
-// use ConsumerStatefulWidget and service providers.
-
-class ProviderDashboardScreen extends ConsumerStatefulWidget {
+class ProviderDashboardScreen extends StatefulWidget {
   const ProviderDashboardScreen({super.key});
 
   @override
-  ConsumerState<ProviderDashboardScreen> createState() => _ProviderDashboardScreenState();
+  State<ProviderDashboardScreen> createState() => _ProviderDashboardScreenState();
 }
 
-class _ProviderDashboardScreenState extends ConsumerState<ProviderDashboardScreen> {
+class _ProviderDashboardScreenState extends State<ProviderDashboardScreen> {
   DateTime _focusedDay = DateTime.now();
   DateTime _selectedDay = DateTime.now();
-
+  
+  final AppointmentService _appointmentService = AppointmentService();
   late Future<List<dynamic>> _appointmentsFuture;
+
+  // Cache profile to avoid flickering title
   late Future<Provider> _profileFuture;
 
   @override
@@ -35,16 +32,32 @@ class _ProviderDashboardScreenState extends ConsumerState<ProviderDashboardScree
     _loadData();
   }
 
+  // Retry logic to handle race conditions during partial signups
+  Future<Provider> _loadProfileWithRetry({int retries = 20}) async {
+    for (int i = 0; i < retries; i++) {
+        try {
+          return await ProviderService().getMyProfile();
+        } catch (e) {
+          if (i == retries - 1) rethrow; // If last retry fails, throw error
+          await Future.delayed(const Duration(milliseconds: 200));
+        }
+    }
+    throw Exception('Timeout retrieving profile');
+  }
+
   void _loadData() {
     setState(() {
-      _appointmentsFuture = ref.read(appointmentServiceProvider).getMyAppointments();
-      _profileFuture = ref.read(providerServiceProvider).getMyProfile();
+      _appointmentsFuture = _appointmentService.getMyAppointments();
+      _profileFuture = _loadProfileWithRetry();
     });
   }
 
   Future<void> _signOut(BuildContext context) async {
     await AuthService().signOut();
     // Navigation handled by GoRouter stream
+    if (context.mounted) {
+       // Optional: show snackbar
+    }
   }
 
   List<dynamic> _filterAppointmentsForSelectedDay(List<dynamic> allAppointments) {
@@ -59,6 +72,7 @@ class _ProviderDashboardScreenState extends ConsumerState<ProviderDashboardScree
     return FutureBuilder<Provider>(
       future: _profileFuture,
       builder: (context, profileSnapshot) {
+        // Default title if loading
         String title = 'Bienvenue';
         if (profileSnapshot.hasData) {
           title = 'Bienvenue ${profileSnapshot.data!.businessName}';
@@ -86,23 +100,25 @@ class _ProviderDashboardScreenState extends ConsumerState<ProviderDashboardScree
                 Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Center(
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        if (!profileSnapshot.hasData) return;
-                        Navigator.of(context).push(
-                          MaterialPageRoute(builder: (context) => EditAccountScreen(provider: profileSnapshot.data!)),
-                        ).then((result) {
-                          if (result == true) _loadData();
-                        });
-                      },
-                      icon: const Icon(Icons.edit),
-                      label: const Text('Éditer mon compte'),
-                    ),
+                    child: profileSnapshot.connectionState == ConnectionState.waiting 
+                      ? const CircularProgressIndicator()
+                      : ElevatedButton.icon(
+                          onPressed: () {
+                             if (!profileSnapshot.hasData) return;
+                             Navigator.of(context).push(
+                              MaterialPageRoute(builder: (context) => EditAccountScreen(provider: profileSnapshot.data!)),
+                            ).then((result) {
+                               if (result == true) _loadData();
+                            });
+                          },
+                          icon: const Icon(Icons.edit),
+                          label: const Text('Éditer mon compte'),
+                        ),
                   ),
                 ),
 
                 const Divider(),
-
+                
                 // --- SERVICES ---
                 const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
@@ -111,7 +127,7 @@ class _ProviderDashboardScreenState extends ConsumerState<ProviderDashboardScree
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                 ),
-
+                
                 if (profileSnapshot.connectionState == ConnectionState.waiting)
                   const Center(child: CircularProgressIndicator())
                 else if (profileSnapshot.hasData)
@@ -120,8 +136,10 @@ class _ProviderDashboardScreenState extends ConsumerState<ProviderDashboardScree
                     child: ListView.builder(
                       scrollDirection: Axis.horizontal,
                       padding: const EdgeInsets.symmetric(horizontal: 16),
+                      // +1 for the "Add" card
                       itemCount: profileSnapshot.data!.services.length + 1,
                       itemBuilder: (context, index) {
+                        // Render "Add Card" at the end
                         if (index == profileSnapshot.data!.services.length) {
                           return Container(
                             width: 140,
@@ -132,7 +150,7 @@ class _ProviderDashboardScreenState extends ConsumerState<ProviderDashboardScree
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                               child: InkWell(
                                 onTap: () {
-                                  Navigator.of(context).push(
+                                   Navigator.of(context).push(
                                     MaterialPageRoute(builder: (context) => const AddServiceScreen()),
                                   ).then((_) => _loadData());
                                 },
@@ -181,6 +199,7 @@ class _ProviderDashboardScreenState extends ConsumerState<ProviderDashboardScree
                                             color: Colors.blue.withOpacity(0.1),
                                             shape: BoxShape.circle,
                                           ),
+                                          // Simple icon based on name or just default
                                           child: const Icon(Icons.cut, color: Colors.blue, size: 20),
                                         ),
                                       ],
@@ -214,7 +233,7 @@ class _ProviderDashboardScreenState extends ConsumerState<ProviderDashboardScree
                 const Divider(),
 
                 // --- CALENDAR & APPOINTMENTS ---
-                Padding(
+                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -224,8 +243,8 @@ class _ProviderDashboardScreenState extends ConsumerState<ProviderDashboardScree
                         style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                       ),
                       Text(
-                        DateFormat('EEE d MMM', 'fr_FR').format(_selectedDay).replaceFirstMapped(RegExp(r'^\w'), (match) => match.group(0)!.toUpperCase()),
-                        style: TextStyle(color: Colors.grey.shade700, fontWeight: FontWeight.w600),
+                         DateFormat('EEE d MMM', 'fr_FR').format(_selectedDay).replaceFirstMapped(RegExp(r'^\w'), (match) => match.group(0)!.toUpperCase()),
+                         style: TextStyle(color: Colors.grey.shade700, fontWeight: FontWeight.w600),
                       ),
                     ],
                   ),
@@ -235,7 +254,7 @@ class _ProviderDashboardScreenState extends ConsumerState<ProviderDashboardScree
                   firstDay: DateTime.utc(2023, 1, 1),
                   lastDay: DateTime.utc(2030, 12, 31),
                   focusedDay: _focusedDay,
-                  calendarFormat: CalendarFormat.week,
+                  calendarFormat: CalendarFormat.week, // Force Week strip
                   startingDayOfWeek: StartingDayOfWeek.monday,
                   selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
                   onDaySelected: (selectedDay, focusedDay) {
@@ -248,7 +267,7 @@ class _ProviderDashboardScreenState extends ConsumerState<ProviderDashboardScree
                     _focusedDay = focusedDay;
                   },
                   headerStyle: const HeaderStyle(
-                    formatButtonVisible: false,
+                    formatButtonVisible: false, 
                     titleCentered: true,
                     titleTextStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
@@ -261,6 +280,26 @@ class _ProviderDashboardScreenState extends ConsumerState<ProviderDashboardScree
                       color: Colors.green,
                       shape: BoxShape.circle,
                     ),
+                  ),
+                  calendarBuilders: CalendarBuilders(
+                    markerBuilder: (context, day, events) {
+                       if (!profileSnapshot.hasData) return null;
+                       // We could add dots here if we pre-fetched allappointments and mapped them to days.
+                       // For now, let's keep it simple or strictly follow "working day" indication logic.
+                       final workingHours = profileSnapshot.data!.workingHours;
+                       final dayIndex = day.weekday % 7; 
+                       final wh = workingHours.firstWhere(
+                        (element) => element.dayOfWeek == dayIndex, 
+                        orElse: () => WorkingHours(dayOfWeek: dayIndex, startTime: '', endTime: '', isClosed: true)
+                      );
+                      
+                      if (wh.isClosed) {
+                         // Maybe a small dot to indicate closed? Or nothing.
+                         // Let's rely on default styling which is fine.
+                         // Or we can gray out the text in defaultBuilder if needed.
+                      }
+                      return null;
+                    },
                   ),
                 ),
 
@@ -281,9 +320,10 @@ class _ProviderDashboardScreenState extends ConsumerState<ProviderDashboardScree
                     final filteredAppts = _filterAppointmentsForSelectedDay(allAppts);
 
                     if (filteredAppts.isEmpty) {
-                      return _buildEmptyState();
+                       return _buildEmptyState();
                     }
 
+                    // Sort by time
                     filteredAppts.sort((a, b) => a['startTime'].compareTo(b['startTime']));
 
                     return ListView.builder(
@@ -306,7 +346,7 @@ class _ProviderDashboardScreenState extends ConsumerState<ProviderDashboardScree
       },
     );
   }
-
+  
   Widget _buildEmptyState() {
     return Center(
       child: Padding(
@@ -331,7 +371,8 @@ class _ProviderDashboardScreenState extends ConsumerState<ProviderDashboardScree
     final startTime = DateTime.parse(appt['startTime']);
     final endTime = startTime.add(Duration(minutes: service['duration'] ?? 30));
     final status = appt['status'];
-
+    
+    // Status styling
     Color statusColor;
     String statusText;
     switch(status) {
@@ -357,6 +398,7 @@ class _ProviderDashboardScreenState extends ConsumerState<ProviderDashboardScree
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Time Column
           SizedBox(
             width: 60,
             child: Column(
@@ -373,6 +415,7 @@ class _ProviderDashboardScreenState extends ConsumerState<ProviderDashboardScree
             ),
           ),
           
+          // Timeline Line (Visual flair)
           Container(
              width: 2,
              height: 80,
@@ -380,6 +423,7 @@ class _ProviderDashboardScreenState extends ConsumerState<ProviderDashboardScree
              margin: const EdgeInsets.symmetric(horizontal: 12),
           ),
 
+          // Appointment Card
           Expanded(
             child: Container(
               decoration: BoxDecoration(

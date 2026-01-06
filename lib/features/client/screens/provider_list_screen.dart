@@ -3,6 +3,7 @@ import 'package:rxdart/rxdart.dart';
 import '../../../shared/models/provider.dart';
 import '../../provider/services/provider_service.dart';
 import 'provider_details_screen.dart';
+import '../../client/services/user_service.dart';
 
 class ProviderListScreen extends StatefulWidget {
   const ProviderListScreen({super.key});
@@ -13,20 +14,42 @@ class ProviderListScreen extends StatefulWidget {
 
 class _ProviderListScreenState extends State<ProviderListScreen> {
   final ProviderService _providerService = ProviderService();
+  final UserService _userService = UserService();
   late Future<List<Provider>> _providersFuture;
   final TextEditingController _searchController = TextEditingController();
   final BehaviorSubject<String> _searchSubject = BehaviorSubject<String>();
+  Set<String> _favoriteIds = {};
+  bool _showFavoritesOnly = false;
+  bool _isLoadingFavorites = true;
 
   @override
   void initState() {
     super.initState();
     _providersFuture = _providerService.searchProviders();
+    _loadFavorites();
     _searchSubject
         .debounceTime(const Duration(milliseconds: 500))
         .listen((query) {
       _performSearch(query);
     });
   }
+
+  Future<void> _loadFavorites() async {
+    try {
+      final favorites = await _userService.getFavorites();
+      if (mounted) {
+        setState(() {
+          _favoriteIds = favorites.map((p) => p.id).toSet();
+          _isLoadingFavorites = false;
+        });
+      }
+    } catch (e) {
+      // Handle error visually if needed
+      setState(() => _isLoadingFavorites = false);
+    }
+  }
+
+
 
   @override
   void dispose() {
@@ -37,7 +60,22 @@ class _ProviderListScreenState extends State<ProviderListScreen> {
 
   void _performSearch(String query) {
     setState(() {
-      _providersFuture = _providerService.searchProviders(query: query);
+       // If showing favorites only, we filter locally or fetch favorites again. 
+       // For simplicity, if favorites mode is on, we filter the search results or just show favorites matching query.
+       // Here we reset to all providers search. If user wants to search within favorites, we'd need different logic.
+       // Let's assume search overrides favorite filter or favorite filter is a toggle applied to results.
+       // Actually simplest: 
+       if (_showFavoritesOnly) {
+          _providersFuture = _userService.getFavorites().then((favs) {
+             if (query.isEmpty) return favs;
+             return favs.where((p) => 
+               p.businessName.toLowerCase().contains(query.toLowerCase()) || 
+               p.city.toLowerCase().contains(query.toLowerCase())
+             ).toList();
+          });
+       } else {
+          _providersFuture = _providerService.searchProviders(query: query);
+       }
     });
   }
 
@@ -58,6 +96,25 @@ class _ProviderListScreenState extends State<ProviderListScreen> {
       ),
       body: Column(
         children: [
+          // Filter Chips
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                FilterChip(
+                  label: const Text('Mes favoris'),
+                  selected: _showFavoritesOnly,
+                  onSelected: (selected) {
+                    setState(() {
+                      _showFavoritesOnly = selected;
+                      _performSearch(_searchController.text);
+                    });
+                  },
+                ),
+              ],
+            ),
+          ),
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: TextField(
@@ -132,7 +189,7 @@ class _ProviderListScreenState extends State<ProviderListScreen> {
                           MaterialPageRoute(
                             builder: (context) => ProviderDetailsScreen(provider: provider),
                           ),
-                        );
+                        ).then((_) => _loadFavorites()); // Refresh favorites when coming back
                       },
                     );
                   },

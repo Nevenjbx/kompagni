@@ -5,6 +5,7 @@ import '../../../shared/models/provider.dart';
 import '../../../shared/models/service.dart';
 import '../../provider/services/service_service.dart';
 import '../services/appointment_service.dart';
+import '../../client/services/user_service.dart';
 
 class ProviderDetailsScreen extends StatefulWidget {
   final Provider provider;
@@ -18,6 +19,7 @@ class ProviderDetailsScreen extends StatefulWidget {
 class _ProviderDetailsScreenState extends State<ProviderDetailsScreen> {
   final ServiceService _serviceService = ServiceService();
   final AppointmentService _appointmentService = AppointmentService();
+  final UserService _userService = UserService();
 
   late Future<List<Service>> _servicesFuture;
   Service? _selectedService;
@@ -27,11 +29,50 @@ class _ProviderDetailsScreenState extends State<ProviderDetailsScreen> {
   String? _selectedSlot;
   bool _isLoadingSlots = false;
   bool _isBooking = false;
+  bool _isFavorite = false;
 
   @override
   void initState() {
     super.initState();
     _servicesFuture = _serviceService.getServices(widget.provider.id);
+    _checkFavoriteStatus();
+  }
+
+  Future<void> _checkFavoriteStatus() async {
+    try {
+      final favorites = await _userService.getFavorites();
+      if (mounted) {
+        setState(() {
+          _isFavorite = favorites.any((p) => p.id == widget.provider.id);
+        });
+      }
+    } catch (e) {
+      // Handle error silently or log
+    }
+  }
+
+  Future<void> _toggleFavorite() async {
+    setState(() {
+      _isFavorite = !_isFavorite;
+    });
+
+    try {
+      if (_isFavorite) {
+        await _userService.addFavorite(widget.provider.id);
+      } else {
+        await _userService.removeFavorite(widget.provider.id);
+      }
+    } catch (e) {
+      // Revert on error
+      setState(() {
+        _isFavorite = !_isFavorite;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur: $e')),
+        );
+      }
+    }
   }
 
   void _onDaySelected(DateTime selectedDay, DateTime focusedDay) {
@@ -118,7 +159,18 @@ class _ProviderDetailsScreenState extends State<ProviderDetailsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(widget.provider.businessName)),
+      appBar: AppBar(
+        title: Text(widget.provider.businessName),
+        actions: [
+          IconButton(
+            icon: Icon(
+              _isFavorite ? Icons.favorite : Icons.favorite_border,
+              color: _isFavorite ? Colors.red : null,
+            ),
+            onPressed: _toggleFavorite,
+          ),
+        ],
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(

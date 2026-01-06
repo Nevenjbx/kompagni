@@ -6,6 +6,10 @@ import '../services/appointment_service.dart';
 import '../services/pet_service.dart';
 import 'add_pet_screen.dart';
 import 'provider_list_screen.dart';
+import 'provider_details_screen.dart';
+import '../../client/services/user_service.dart';
+import '../../../shared/models/provider.dart';
+import 'client_profile_screen.dart';
 
 class HomeClientScreen extends StatefulWidget {
   const HomeClientScreen({super.key});
@@ -16,7 +20,10 @@ class HomeClientScreen extends StatefulWidget {
 
 class _HomeClientScreenState extends State<HomeClientScreen> {
   final AppointmentService _appointmentService = AppointmentService();
+  final UserService _userService = UserService();
   late Future<List<dynamic>> _appointmentsFuture;
+  late Future<List<Provider>> _favoritesFuture;
+  bool _showAllHistory = false;
   User? _user;
 
   @override
@@ -30,6 +37,7 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
   void _refreshAppointments() {
     setState(() {
       _appointmentsFuture = _appointmentService.getMyAppointments();
+      _favoritesFuture = _userService.getFavorites();
     });
   }
 
@@ -93,10 +101,14 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
                   _buildHeader(displayName),
                   const SizedBox(height: 32),
 
+                  // My Experts (Favorites)
+                  _buildFavoritesSection(),
+                  const SizedBox(height: 32),
+
                   // Next Appointment
-                  const Text(
+                  Text(
                     'Prochain rdv',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    style: Theme.of(context).textTheme.titleLarge,
                   ),
                   const SizedBox(height: 12),
                   _buildNextAppointmentSection(),
@@ -111,25 +123,17 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
                           MaterialPageRoute(
                             builder: (context) => const ProviderListScreen(),
                           ),
-                        );
+                        ).then((_) => _refreshAppointments());
                       },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Theme.of(context).primaryColor,
-                        foregroundColor: Colors.white,
-                        textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                      ),
                       child: const Text('Prendre rendez-vous'),
                     ),
                   ),
                   const SizedBox(height: 32),
 
                   // Appointment History
-                   const Text(
+                   Text(
                     'Historique des rdv',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    style: Theme.of(context).textTheme.titleLarge,
                   ),
                   const SizedBox(height: 12),
                   _buildHistorySection(),
@@ -148,24 +152,13 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
       children: [
         Text(
           'Bonjour $name',
-          style: const TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
+          style: Theme.of(context).textTheme.headlineSmall,
         ),
         IconButton(
           onPressed: () {
-            showDialog(
-              context: context,
-              builder: (ctx) => AlertDialog(
-                title: const Text('Fonctionnalité à venir'),
-                content: const Text('La modification du profil sera bientôt disponible.'),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.of(ctx).pop(),
-                    child: const Text('OK'),
-                  )
-                ],
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => const ClientProfileScreen(),
               ),
             );
           },
@@ -204,13 +197,13 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
           return Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.grey[100],
+              color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.3),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Center(
+            child: Center(
               child: Text(
                 'Aucun rendez vous réservé',
-                style: TextStyle(color: Colors.grey),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
               ),
             ),
           );
@@ -252,13 +245,28 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
            return const Text('Aucun historique.', style: TextStyle(color: Colors.grey));
         }
 
-        return ListView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: history.length > 5 ? 5 : history.length, // Show max 5 recent
-          itemBuilder: (context, index) {
-            return _buildAppointmentCard(history[index]);
-          },
+        final visibleHistory = _showAllHistory ? history : history.take(3).toList();
+
+        return Column(
+          children: [
+            ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: visibleHistory.length,
+              itemBuilder: (context, index) {
+                return _buildAppointmentCard(visibleHistory[index]);
+              },
+            ),
+            if (history.length > 3)
+              TextButton(
+                onPressed: () {
+                  setState(() {
+                    _showAllHistory = !_showAllHistory;
+                  });
+                },
+                child: Text(_showAllHistory ? 'Voir moins' : 'Voir plus'),
+              ),
+          ],
         );
       },
     );
@@ -335,15 +343,14 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
     return Card(
       elevation: isNext ? 4 : 1,
       margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      color: isNext ? Colors.blue[50] : Colors.white,
+      color: isNext ? Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3) : Theme.of(context).cardColor,
       child: InkWell(
         onTap: canInteract ? () => _showAppointmentDetails(appt) : null,
         borderRadius: BorderRadius.circular(12),
         child: ListTile(
           title: Text(
             service['name'],
-            style: const TextStyle(fontWeight: FontWeight.bold),
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
           ),
           subtitle: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -355,11 +362,119 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
             ],
           ),
           leading: CircleAvatar(
-             backgroundColor: isNext ? Colors.blue : Colors.grey[300],
-             child: Icon(Icons.calendar_today, color: isNext ? Colors.white : Colors.grey[600]),
+             backgroundColor: isNext ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.surfaceContainerHighest,
+             child: Icon(Icons.calendar_today, color: isNext ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onSurfaceVariant),
           ),
         ),
       ),
+    );
+  }
+  Widget _buildFavoritesSection() {
+    return FutureBuilder<List<Provider>>(
+      future: _favoritesFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+           return const SizedBox(height: 180, child: Center(child: CircularProgressIndicator()));
+        }
+        if (snapshot.hasError) {
+           return const Text('Erreur chargement favoris', style: TextStyle(color: Colors.red));
+        }
+
+        final favorites = snapshot.data ?? [];
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Mes experts',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 12),
+            if (favorites.isEmpty)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Center(
+                  child: Text(
+                    'Pas encore de favoris',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ),
+              )
+            else
+              SizedBox(
+                height: 170,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: favorites.length,
+                  itemBuilder: (context, index) {
+                    final provider = favorites[index];
+                    return Container(
+                      width: 120,
+                      margin: const EdgeInsets.only(right: 12),
+                      child: Card(
+                        elevation: 2,
+                        clipBehavior: Clip.antiAlias,
+                        child: InkWell(
+                          onTap: () {
+                             Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) => ProviderDetailsScreen(provider: provider),
+                              ),
+                            ).then((_) => _refreshAppointments());
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                CircleAvatar(
+                                  radius: 25,
+                                  backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                                  child: Text(
+                                    provider.businessName.isNotEmpty
+                                        ? provider.businessName[0].toUpperCase()
+                                        : '?',
+                                    style: TextStyle(
+                                      color: Theme.of(context).colorScheme.onPrimaryContainer,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  provider.businessName,
+                                  maxLines: 2,
+                                  textAlign: TextAlign.center,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: Theme.of(context).textTheme.labelLarge,
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  provider.city,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 }

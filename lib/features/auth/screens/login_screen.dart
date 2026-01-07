@@ -1,23 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../services/auth_service.dart';
-import '../../../shared/services/user_service.dart';
+import '../providers/auth_provider.dart';
+import '../../../shared/repositories/impl/user_repository_impl.dart';
 import 'signup_screen.dart';
 
-class LoginScreen extends StatefulWidget {
+class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
-  final AuthService _authService = AuthService();
-  final UserService _userService = UserService();
+class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
-  bool _obscureText = true; // State for password visibility
+  bool _obscureText = true;
   String? _errorMessage;
 
   @override
@@ -41,36 +40,31 @@ class _LoginScreenState extends State<LoginScreen> {
         throw const AuthException('Veuillez remplir tous les champs');
       }
 
-      await _authService.signInEmailPassword(email, password);
-      
+      final authService = ref.read(authServiceProvider);
+      await authService.signInEmailPassword(email, password);
+
       // Fetch user profile from backend
-      Map<String, dynamic>? userProfile = await _userService.getCurrentUser();
+      final userRepository = ref.read(userRepositoryProvider);
+      Map<String, dynamic>? userProfile = await userRepository.getCurrentUser();
 
       // If profile doesn't exist locally (data mismatch), try to sync
       if (userProfile == null) {
-        // Try to recover role from user metadata
-        final user = _authService.currentUser;
+        final user = authService.currentUser;
         final metadataRole = user?.userMetadata?['role'];
         final roleToSync = metadataRole?.toString() ?? 'CLIENT';
-        
-        await _userService.syncUser(role: roleToSync);
-        userProfile = {'role': roleToSync};
+
+        await userRepository.syncUser(role: roleToSync);
       }
 
-      final role = userProfile['role'];
-
-      // Manual navigation removed. GoRouter's auth listener handles redirection.
-      if (mounted) {
-         // Optionally show a success snackbar or just wait for redirect
-      }
+      // Navigation handled by GoRouter's auth listener
     } on AuthException catch (e) {
       setState(() {
         _errorMessage = e.message;
       });
     } catch (e) {
-      debugPrint('Login Error: $e'); // Print error to console
+      debugPrint('Login Error: $e');
       setState(() {
-        _errorMessage = 'Une erreur inattendue est survenue: $e'; // Show error details in UI for now
+        _errorMessage = 'Une erreur inattendue est survenue';
       });
     } finally {
       if (mounted) {
@@ -93,68 +87,34 @@ class _LoginScreenState extends State<LoginScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               if (_errorMessage != null)
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  margin: const EdgeInsets.only(bottom: 16),
-                  color: Colors.red.shade100,
-                  child: Text(
-                    _errorMessage!,
-                    style: TextStyle(color: Colors.red.shade900),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-              TextField(
+                _ErrorBanner(message: _errorMessage!),
+              _EmailField(
                 controller: _emailController,
-                decoration: const InputDecoration(
-                  labelText: 'Email',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.email),
-                ),
-                keyboardType: TextInputType.emailAddress,
-                autofillHints: const [AutofillHints.email],
-                textInputAction: TextInputAction.next,
+                onSubmitted: (_) => FocusScope.of(context).nextFocus(),
               ),
               const SizedBox(height: 16),
-              TextField(
+              _PasswordField(
                 controller: _passwordController,
-                decoration: InputDecoration(
-                  labelText: 'Mot de passe',
-                  border: const OutlineInputBorder(),
-                  prefixIcon: const Icon(Icons.lock),
-                  suffixIcon: IconButton(
-                    icon: Icon(
-                      _obscureText ? Icons.visibility : Icons.visibility_off,
-                    ),
-                    onPressed: () {
-                      setState(() {
-                        _obscureText = !_obscureText;
-                      });
-                    },
-                  ),
-                ),
                 obscureText: _obscureText,
-                textInputAction: TextInputAction.done,
+                onToggleVisibility: () {
+                  setState(() {
+                    _obscureText = !_obscureText;
+                  });
+                },
                 onSubmitted: (_) => _signIn(),
               ),
               const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: _isLoading ? null : _signIn,
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                ),
-                child: _isLoading
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Text('Se connecter'),
+              _LoginButton(
+                isLoading: _isLoading,
+                onPressed: _signIn,
               ),
               const SizedBox(height: 16),
               TextButton(
                 onPressed: () {
                   Navigator.of(context).push(
-                    MaterialPageRoute(builder: (context) => const SignUpScreen()),
+                    MaterialPageRoute(
+                      builder: (context) => const SignUpScreen(),
+                    ),
                   );
                 },
                 child: const Text('Créer un compte'),
@@ -163,6 +123,118 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Error banner widget
+class _ErrorBanner extends StatelessWidget {
+  final String message;
+
+  const _ErrorBanner({required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.only(bottom: 16),
+      color: Colors.red.shade100,
+      child: Text(
+        message,
+        style: TextStyle(color: Colors.red.shade900),
+        textAlign: TextAlign.center,
+      ),
+    );
+  }
+}
+
+/// Email text field
+class _EmailField extends StatelessWidget {
+  final TextEditingController controller;
+  final ValueChanged<String>? onSubmitted;
+
+  const _EmailField({
+    required this.controller,
+    this.onSubmitted,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: controller,
+      decoration: const InputDecoration(
+        labelText: 'Email',
+        border: OutlineInputBorder(),
+        prefixIcon: Icon(Icons.email),
+      ),
+      keyboardType: TextInputType.emailAddress,
+      autofillHints: const [AutofillHints.email],
+      textInputAction: TextInputAction.next,
+      onSubmitted: onSubmitted,
+    );
+  }
+}
+
+/// Password text field
+class _PasswordField extends StatelessWidget {
+  final TextEditingController controller;
+  final bool obscureText;
+  final VoidCallback onToggleVisibility;
+  final ValueChanged<String>? onSubmitted;
+
+  const _PasswordField({
+    required this.controller,
+    required this.obscureText,
+    required this.onToggleVisibility,
+    this.onSubmitted,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: controller,
+      decoration: InputDecoration(
+        labelText: 'Mot de passe',
+        border: const OutlineInputBorder(),
+        prefixIcon: const Icon(Icons.lock),
+        suffixIcon: IconButton(
+          icon: Icon(
+            obscureText ? Icons.visibility : Icons.visibility_off,
+          ),
+          onPressed: onToggleVisibility,
+        ),
+      ),
+      obscureText: obscureText,
+      textInputAction: TextInputAction.done,
+      onSubmitted: onSubmitted,
+    );
+  }
+}
+
+/// Login button
+class _LoginButton extends StatelessWidget {
+  final bool isLoading;
+  final VoidCallback onPressed;
+
+  const _LoginButton({
+    required this.isLoading,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ElevatedButton(
+      onPressed: isLoading ? null : onPressed,
+      style: ElevatedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+      ),
+      child: isLoading
+          ? const SizedBox(
+              height: 20,
+              width: 20,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : const Text('Se connecter'),
     );
   }
 }

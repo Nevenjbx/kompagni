@@ -46,4 +46,45 @@ class Provider {
           [],
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'businessName': businessName,
+      'description': description,
+      'address': address,
+      'city': city,
+      'postalCode': postalCode,
+      'latitude': latitude,
+      'longitude': longitude,
+      'services': services.map((s) => s.toJson()).toList(),
+      'workingHours': workingHours.map((wh) => wh.toJson()).toList(),
+    };
+  }
+
+  Provider copyWith({
+    String? id,
+    String? businessName,
+    String? description,
+    String? address,
+    String? city,
+    String? postalCode,
+    double? latitude,
+    double? longitude,
+    List<Service>? services,
+    List<WorkingHours>? workingHours,
+  }) {
+    return Provider(
+      id: id ?? this.id,
+      businessName: businessName ?? this.businessName,
+      description: description ?? this.description,
+      address: address ?? this.address,
+      city: city ?? this.city,
+      postalCode: postalCode ?? this.postalCode,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
+      services: services ?? this.services,
+      workingHours: workingHours ?? this.workingHours,
+    );
+  }
 }

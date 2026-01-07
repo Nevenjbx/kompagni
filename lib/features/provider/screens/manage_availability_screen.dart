@@ -1,28 +1,43 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../shared/models/working_hours.dart';
-import '../services/provider_service.dart';
+import '../../../shared/providers/provider_profile_provider.dart';
+import '../widgets/day_availability_card.dart';
 
-class ManageAvailabilityScreen extends StatefulWidget {
+class ManageAvailabilityScreen extends ConsumerStatefulWidget {
   const ManageAvailabilityScreen({super.key});
 
   @override
-  State<ManageAvailabilityScreen> createState() => _ManageAvailabilityScreenState();
+  ConsumerState<ManageAvailabilityScreen> createState() =>
+      _ManageAvailabilityScreenState();
 }
 
-class _ManageAvailabilityScreenState extends State<ManageAvailabilityScreen> {
-  final _providerService = ProviderService();
+class _ManageAvailabilityScreenState
+    extends ConsumerState<ManageAvailabilityScreen> {
   bool _isLoading = false;
 
   // Initialize with default 9-5 MF
-  // Initialize with default 9-5 MF
   List<WorkingHours> _workingHours = List.generate(7, (index) {
     return WorkingHours(
-      dayOfWeek: index, // 0=Sun, 1=Mon, ..., 6=Sat.
+      dayOfWeek: index,
       startTime: '09:00',
       endTime: '17:00',
       isClosed: index == 0 || index == 6, // Close weekends by default
     );
   });
+
+  static const _dayNames = [
+    'Dimanche',
+    'Lundi',
+    'Mardi',
+    'Mercredi',
+    'Jeudi',
+    'Vendredi',
+    'Samedi'
+  ];
+
+  // Display order: Mon(1) ... Sat(6), Sun(0)
+  static const _displayOrder = [1, 2, 3, 4, 5, 6, 0];
 
   @override
   void initState() {
@@ -33,49 +48,32 @@ class _ManageAvailabilityScreenState extends State<ManageAvailabilityScreen> {
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
     try {
-      final provider = await _providerService.getMyProfile();
-      if (mounted) {
+      final profileAsync = await ref.read(providerProfileProvider.future);
+      if (profileAsync != null && mounted) {
+        final fetchedMap = {
+          for (var wh in profileAsync.workingHours) wh.dayOfWeek: wh
+        };
+
         setState(() {
-          // Merge fetched hours into default structure
-          // The backend might return only open days or all days depending on implementation.
-          // Usually "updateWorkingHours" sends only open days.
-          // We iterate over our default 7 days list and update if we find a match.
-          
-          // First, reset all to closed if we assume backend returns *only* open days?
-          // Or backend returns all?
-          // ProviderService.updateWorkingHours sends ".where((wh) => !wh.isClosed)".
-          // So backend likely stores only non-closed hours.
-          // Therefore, any day NOT in the response should be considered closed.
-          
-          // Reset all to closed first to be safe, or just update matches.
-          // Better approach:
-          // 1. Create a map of fetched hours by dayOfWeek.
-          // 2. Iterate 0..6. If in map, use it (isClosed=false). If not, use default (isClosed=true).
-          
-          final fetchedMap = {
-            for (var wh in provider.workingHours) wh.dayOfWeek: wh
-          };
-          
           _workingHours = List.generate(7, (index) {
-             final existing = fetchedMap[index];
-             if (existing != null) {
-               return WorkingHours(
-                 dayOfWeek: index,
-                 startTime: existing.startTime,
-                 endTime: existing.endTime,
-                 isClosed: false,
-                 breakStartTime: existing.breakStartTime,
-                 breakEndTime: existing.breakEndTime,
-               );
-             } else {
-               // Not in DB -> Closed
-               return WorkingHours(
-                 dayOfWeek: index,
-                 startTime: '09:00',
-                 endTime: '17:00',
-                 isClosed: true,
-               );
-             }
+            final existing = fetchedMap[index];
+            if (existing != null) {
+              return WorkingHours(
+                dayOfWeek: index,
+                startTime: existing.startTime,
+                endTime: existing.endTime,
+                isClosed: false,
+                breakStartTime: existing.breakStartTime,
+                breakEndTime: existing.breakEndTime,
+              );
+            } else {
+              return WorkingHours(
+                dayOfWeek: index,
+                startTime: '09:00',
+                endTime: '17:00',
+                isClosed: true,
+              );
+            }
           });
         });
       }
@@ -93,7 +91,10 @@ class _ManageAvailabilityScreenState extends State<ManageAvailabilityScreen> {
   Future<void> _save() async {
     setState(() => _isLoading = true);
     try {
-      await _providerService.updateWorkingHours(_workingHours);
+      await ref
+          .read(providerProfileProvider.notifier)
+          .updateWorkingHours(_workingHours);
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Disponibilités mises à jour !')),
@@ -111,12 +112,14 @@ class _ManageAvailabilityScreenState extends State<ManageAvailabilityScreen> {
     }
   }
 
+  void _updateWorkingHours(int index, WorkingHours newValue) {
+    setState(() {
+      _workingHours[index] = newValue;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    // Reorder for UI: Mon(1) ... Sat(6), Sun(0)
-    final displayOrder = [1, 2, 3, 4, 5, 6, 0];
-    final dayNames = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
-
     return Scaffold(
       appBar: AppBar(title: const Text('Gérer mes disponibilités')),
       body: _isLoading
@@ -124,105 +127,79 @@ class _ManageAvailabilityScreenState extends State<ManageAvailabilityScreen> {
           : ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                ...displayOrder.map((dayIndex) {
-                  final wh = _workingHours.firstWhere((w) => w.dayOfWeek == dayIndex);
-                  return Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Column(
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(dayNames[dayIndex], style: const TextStyle(fontWeight: FontWeight.bold)),
-                              Switch(
-                                value: !wh.isClosed,
-                                onChanged: (val) {
-                                  setState(() {
-                                    final idx = _workingHours.indexOf(wh);
-                                    _workingHours[idx] = WorkingHours(
-                                      dayOfWeek: wh.dayOfWeek,
-                                      startTime: wh.startTime,
-                                      endTime: wh.endTime,
-                                      isClosed: !val,
-                                    );
-                                  });
-                                },
-                              ),
-                            ],
-                          ),
-                          if (!wh.isClosed)
-                             Row(
-                              children: [
-                                Expanded(
-                                  child: TextFormField(
-                                    initialValue: wh.startTime,
-                                    decoration: const InputDecoration(labelText: 'Début (HH:mm)'),
-                                    onChanged: (v) {
-                                       final idx = _workingHours.indexOf(wh);
-                                       _workingHours[idx] = WorkingHours(dayOfWeek: wh.dayOfWeek, startTime: v, endTime: wh.endTime, isClosed: false);
-                                    },
-                                  ),
-                                ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: TextFormField(
-                                    initialValue: wh.endTime,
-                                    decoration: const InputDecoration(labelText: 'Fin (HH:mm)'),
-                                    onChanged: (v) {
-                                       final idx = _workingHours.indexOf(wh);
-                                       _workingHours[idx] = WorkingHours(dayOfWeek: wh.dayOfWeek, startTime: wh.startTime, endTime: v, isClosed: false);
-                                    },
-                                  ),
-                                ),
-                              ],
-                            ),
-                          if (!wh.isClosed)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 8.0),
-                              child: Row(
-                                children: [
-                                  Expanded(
-                                    child: TextFormField(
-                                      initialValue: wh.breakStartTime,
-                                      decoration: const InputDecoration(labelText: 'Début Pause (optionel)', hintText: '12:00'),
-                                      onChanged: (v) {
-                                         final idx = _workingHours.indexOf(wh);
-                                         _workingHours[idx] = WorkingHours(
-                                            dayOfWeek: wh.dayOfWeek,
-                                            startTime: wh.startTime,
-                                            endTime: wh.endTime,
-                                            isClosed: false,
-                                            breakStartTime: v,
-                                            breakEndTime: wh.breakEndTime
-                                         );
-                                      },
-                                    ),
-                                  ),
-                                  const SizedBox(width: 16),
-                                  Expanded(
-                                    child: TextFormField(
-                                      initialValue: wh.breakEndTime,
-                                      decoration: const InputDecoration(labelText: 'Fin Pause', hintText: '13:00'),
-                                      onChanged: (v) {
-                                         final idx = _workingHours.indexOf(wh);
-                                         _workingHours[idx] = WorkingHours(
-                                            dayOfWeek: wh.dayOfWeek,
-                                            startTime: wh.startTime,
-                                            endTime: wh.endTime,
-                                            isClosed: false,
-                                            breakStartTime: wh.breakStartTime,
-                                            breakEndTime: v
-                                         );
-                                      },
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
+                ..._displayOrder.map((dayIndex) {
+                  final wh =
+                      _workingHours.firstWhere((w) => w.dayOfWeek == dayIndex);
+                  final listIndex = _workingHours.indexOf(wh);
+
+                  return DayAvailabilityCard(
+                    dayName: _dayNames[dayIndex],
+                    workingHours: wh,
+                    onClosedChanged: (isClosed) {
+                      _updateWorkingHours(
+                        listIndex,
+                        WorkingHours(
+                          dayOfWeek: wh.dayOfWeek,
+                          startTime: wh.startTime,
+                          endTime: wh.endTime,
+                          isClosed: isClosed,
+                          breakStartTime: wh.breakStartTime,
+                          breakEndTime: wh.breakEndTime,
+                        ),
+                      );
+                    },
+                    onStartTimeChanged: (value) {
+                      _updateWorkingHours(
+                        listIndex,
+                        WorkingHours(
+                          dayOfWeek: wh.dayOfWeek,
+                          startTime: value,
+                          endTime: wh.endTime,
+                          isClosed: false,
+                          breakStartTime: wh.breakStartTime,
+                          breakEndTime: wh.breakEndTime,
+                        ),
+                      );
+                    },
+                    onEndTimeChanged: (value) {
+                      _updateWorkingHours(
+                        listIndex,
+                        WorkingHours(
+                          dayOfWeek: wh.dayOfWeek,
+                          startTime: wh.startTime,
+                          endTime: value,
+                          isClosed: false,
+                          breakStartTime: wh.breakStartTime,
+                          breakEndTime: wh.breakEndTime,
+                        ),
+                      );
+                    },
+                    onBreakStartChanged: (value) {
+                      _updateWorkingHours(
+                        listIndex,
+                        WorkingHours(
+                          dayOfWeek: wh.dayOfWeek,
+                          startTime: wh.startTime,
+                          endTime: wh.endTime,
+                          isClosed: false,
+                          breakStartTime: value,
+                          breakEndTime: wh.breakEndTime,
+                        ),
+                      );
+                    },
+                    onBreakEndChanged: (value) {
+                      _updateWorkingHours(
+                        listIndex,
+                        WorkingHours(
+                          dayOfWeek: wh.dayOfWeek,
+                          startTime: wh.startTime,
+                          endTime: wh.endTime,
+                          isClosed: false,
+                          breakStartTime: wh.breakStartTime,
+                          breakEndTime: value,
+                        ),
+                      );
+                    },
                   );
                 }),
                 const SizedBox(height: 16),

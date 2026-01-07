@@ -28,4 +28,16 @@ class Service {
       animalType: json['animalType'] ?? 'DOG',
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'providerId': providerId,
+      'name': name,
+      'description': description,
+      'duration': duration,
+      'price': price,
+      'animalType': animalType,
+    };
+  }
 }

@@ -1,78 +1,41 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:table_calendar/table_calendar.dart';
-import 'package:intl/intl.dart';
-import '../../../shared/models/provider.dart';
+import '../../../shared/models/provider.dart' as models;
 import '../../../shared/models/service.dart';
-import '../../provider/services/service_service.dart';
-import '../services/appointment_service.dart';
-import '../../client/services/user_service.dart';
+import '../../../shared/providers/appointments_provider.dart';
+import '../../../shared/providers/favorites_provider.dart';
+import '../../../shared/providers/services_provider.dart';
+import '../widgets/provider_info_section.dart';
+import '../widgets/service_selection_card.dart';
+import '../widgets/booking_calendar.dart';
+import '../widgets/time_slots_grid.dart';
 
-class ProviderDetailsScreen extends StatefulWidget {
-  final Provider provider;
+class ProviderDetailsScreen extends ConsumerStatefulWidget {
+  final models.Provider provider;
 
   const ProviderDetailsScreen({super.key, required this.provider});
 
   @override
-  State<ProviderDetailsScreen> createState() => _ProviderDetailsScreenState();
+  ConsumerState<ProviderDetailsScreen> createState() =>
+      _ProviderDetailsScreenState();
 }
 
-class _ProviderDetailsScreenState extends State<ProviderDetailsScreen> {
-  final ServiceService _serviceService = ServiceService();
-  final AppointmentService _appointmentService = AppointmentService();
-  final UserService _userService = UserService();
-
-  late Future<List<Service>> _servicesFuture;
+class _ProviderDetailsScreenState extends ConsumerState<ProviderDetailsScreen> {
   Service? _selectedService;
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
-  List<String> _availableSlots = [];
   String? _selectedSlot;
-  bool _isLoadingSlots = false;
   bool _isBooking = false;
-  bool _isFavorite = false;
 
   @override
   void initState() {
     super.initState();
-    _servicesFuture = _serviceService.getServices(widget.provider.id);
-    _checkFavoriteStatus();
-  }
-
-  Future<void> _checkFavoriteStatus() async {
-    try {
-      final favorites = await _userService.getFavorites();
-      if (mounted) {
-        setState(() {
-          _isFavorite = favorites.any((p) => p.id == widget.provider.id);
-        });
-      }
-    } catch (e) {
-      // Handle error silently or log
-    }
-  }
-
-  Future<void> _toggleFavorite() async {
-    setState(() {
-      _isFavorite = !_isFavorite;
+    Future.microtask(() {
+      ref
+          .read(servicesProvider.notifier)
+          .loadServicesForProvider(widget.provider.id);
     });
-
-    try {
-      if (_isFavorite) {
-        await _userService.addFavorite(widget.provider.id);
-      } else {
-        await _userService.removeFavorite(widget.provider.id);
-      }
-    } catch (e) {
-      // Revert on error
-      setState(() {
-        _isFavorite = !_isFavorite;
-      });
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur: $e')),
-        );
-      }
-    }
   }
 
   void _onDaySelected(DateTime selectedDay, DateTime focusedDay) {
@@ -81,70 +44,46 @@ class _ProviderDetailsScreenState extends State<ProviderDetailsScreen> {
         _selectedDay = selectedDay;
         _focusedDay = focusedDay;
         _selectedSlot = null;
-        _availableSlots = [];
-      });
-
-      if (_selectedService != null) {
-        _fetchAvailableSlots();
-      }
-    }
-  }
-
-  Future<void> _fetchAvailableSlots() async {
-    if (_selectedDay == null || _selectedService == null) return;
-
-    setState(() {
-      _isLoadingSlots = true;
-    });
-
-    try {
-      final slots = await _appointmentService.getAvailableSlots(
-        widget.provider.id,
-        _selectedService!.id,
-        _selectedDay!,
-      );
-      setState(() {
-        _availableSlots = slots;
-      });
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur lors du chargement des créneaux: $e')),
-      );
-    } finally {
-      setState(() {
-        _isLoadingSlots = false;
       });
     }
   }
 
   Future<void> _bookAppointment() async {
-    if (_selectedService == null || _selectedDay == null || _selectedSlot == null) return;
+    if (_selectedService == null ||
+        _selectedDay == null ||
+        _selectedSlot == null) {
+      return;
+    }
 
     setState(() {
       _isBooking = true;
     });
 
     try {
-      final datePart = DateFormat('yyyy-MM-dd').format(_selectedDay!);
-      // slot is in ISO format full date time
       final startTime = DateTime.parse(_selectedSlot!);
 
-      await _appointmentService.createAppointment(
-        providerId: widget.provider.id,
-        serviceId: _selectedService!.id,
-        startTime: startTime,
-      );
+      await ref.read(appointmentsProvider.notifier).createAppointment(
+            providerId: widget.provider.id,
+            serviceId: _selectedService!.id,
+            startTime: startTime,
+          );
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Rendez-vous confirmé !'), backgroundColor: Colors.green),
+          const SnackBar(
+            content: Text('Rendez-vous confirmé !'),
+            backgroundColor: Colors.green,
+          ),
         );
         Navigator.of(context).pop();
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur réservation: $e'), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text('Erreur réservation: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     } finally {
@@ -156,16 +95,39 @@ class _ProviderDetailsScreenState extends State<ProviderDetailsScreen> {
     }
   }
 
+  Future<void> _toggleFavorite() async {
+    final notifier = ref.read(favoritesProvider.notifier);
+    final isFavorite = ref.read(isFavoriteProvider(widget.provider.id));
+
+    try {
+      if (isFavorite) {
+        await notifier.removeFavorite(widget.provider.id);
+      } else {
+        await notifier.addFavorite(widget.provider);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur: $e')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final isFavorite = ref.watch(isFavoriteProvider(widget.provider.id));
+    final servicesAsync =
+        ref.watch(providerServicesProvider(widget.provider.id));
+
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.provider.businessName),
         actions: [
           IconButton(
             icon: Icon(
-              _isFavorite ? Icons.favorite : Icons.favorite_border,
-              color: _isFavorite ? Colors.red : null,
+              isFavorite ? Icons.favorite : Icons.favorite_border,
+              color: isFavorite ? Colors.red : null,
             ),
             onPressed: _toggleFavorite,
           ),
@@ -176,169 +138,50 @@ class _ProviderDetailsScreenState extends State<ProviderDetailsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              widget.provider.description,
-              style: const TextStyle(fontSize: 16),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '${widget.provider.address}, ${widget.provider.city} ${widget.provider.postalCode}',
-              style: const TextStyle(color: Colors.grey),
-            ),
+            // Provider Info
+            ProviderInfoSection(provider: widget.provider),
             const Divider(height: 32),
+
+            // Services Selection
             const Text(
               'Sélectionnez un service :',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
-            FutureBuilder<List<Service>>(
-              future: _servicesFuture,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const CircularProgressIndicator();
-                } else if (snapshot.hasError) {
-                  return Text('Erreur : ${snapshot.error}');
-                } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return const Text('Aucun service disponible.');
-                }
+            _buildServicesSection(servicesAsync),
 
-                return ListView.separated(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: snapshot.data!.length,
-                  separatorBuilder: (context, index) => const SizedBox(height: 8),
-                  itemBuilder: (context, index) {
-                    final service = snapshot.data![index];
-                    final isSelected = _selectedService?.id == service.id;
-                    
-                    return Material(
-                      color: isSelected ? Colors.blue[50] : Colors.white,
-                      elevation: 1,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        side: BorderSide(
-                          color: isSelected ? Colors.blue : Colors.transparent,
-                          width: 2,
-                        ),
-                      ),
-                      child: InkWell(
-                        onTap: () {
-                          setState(() {
-                            _selectedService = isSelected ? null : service;
-                            _selectedSlot = null;
-                            _availableSlots = [];
-                          });
-                          if (!isSelected && _selectedDay != null) {
-                            _fetchAvailableSlots();
-                          }
-                        },
-                        borderRadius: BorderRadius.circular(12),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      service.name,
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16,
-                                      ),
-                                    ),
-                                  ),
-                                  Text(
-                                    '${service.price}€',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
-                                      color: Theme.of(context).primaryColor,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-                              Row(
-                                children: [
-                                  const Icon(Icons.timer_outlined, size: 16, color: Colors.grey),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    '${service.duration} min',
-                                    style: const TextStyle(color: Colors.grey),
-                                  ),
-                                ],
-                              ),
-                              if (service.description != null && service.description!.isNotEmpty) ...[
-                                const SizedBox(height: 8),
-                                Text(
-                                  service.description!,
-                                  style: const TextStyle(color: Colors.black87),
-                                ),
-                              ],
-                            ],
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
+            // Calendar and Slots (only if service selected)
             if (_selectedService != null) ...[
               const Divider(height: 32),
-              const Text(
-                'Choix de la date :',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              TableCalendar(
-                firstDay: DateTime.now(),
-                lastDay: DateTime.now().add(const Duration(days: 90)),
+              BookingCalendar(
                 focusedDay: _focusedDay,
-                selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
+                selectedDay: _selectedDay,
                 onDaySelected: _onDaySelected,
-                calendarFormat: CalendarFormat.twoWeeks,
-                headerStyle: const HeaderStyle(formatButtonVisible: false, titleCentered: true),
               ),
               if (_selectedDay != null) ...[
                 const SizedBox(height: 16),
-                const Text(
-                  'Créneaux disponibles :',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                TimeSlotsGrid(
+                  providerId: widget.provider.id,
+                  serviceId: _selectedService!.id,
+                  selectedDate: _selectedDay!,
+                  selectedSlot: _selectedSlot,
+                  onSlotSelected: (slot) {
+                    setState(() {
+                      _selectedSlot = slot;
+                    });
+                  },
                 ),
-                const SizedBox(height: 8),
-                if (_isLoadingSlots)
-                  const CircularProgressIndicator()
-                else if (_availableSlots.isEmpty)
-                  const Text('Aucun créneau disponible ce jour.')
-                else
-                  Wrap(
-                    spacing: 8.0,
-                    runSpacing: 8.0,
-                    children: _availableSlots.map((slotIso) {
-                      final dt = DateTime.parse(slotIso);
-                      final timeStr = DateFormat('HH:mm').format(dt);
-                      final isSelected = _selectedSlot == slotIso;
-                      return ChoiceChip(
-                        label: Text(timeStr),
-                        selected: isSelected,
-                        onSelected: (selected) {
-                          setState(() {
-                            _selectedSlot = selected ? slotIso : null;
-                          });
-                        },
-                      );
-                    }).toList(),
-                  ),
               ],
             ],
+
             const SizedBox(height: 32),
+
+            // Book Button
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: (_isBooking || _selectedSlot == null) ? null : _bookAppointment,
+                onPressed:
+                    (_isBooking || _selectedSlot == null) ? null : _bookAppointment,
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
@@ -354,6 +197,41 @@ class _ProviderDetailsScreenState extends State<ProviderDetailsScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildServicesSection(AsyncValue<List<Service>> servicesAsync) {
+    return servicesAsync.when(
+      loading: () => const CircularProgressIndicator(),
+      error: (error, _) => Text('Erreur : $error'),
+      data: (services) {
+        if (services.isEmpty) {
+          return const Text('Aucun service disponible.');
+        }
+
+        return ListView.separated(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: services.length,
+          separatorBuilder: (context, index) => const SizedBox(height: 8),
+          itemBuilder: (context, index) {
+            final service = services[index];
+            final isSelected = _selectedService?.id == service.id;
+
+            return ServiceSelectionCard(
+              service: service,
+              isSelected: isSelected,
+              onTap: () {
+                setState(() {
+                  _selectedService =
+                      _selectedService?.id == service.id ? null : service;
+                  _selectedSlot = null;
+                });
+              },
+            );
+          },
+        );
+      },
     );
   }
 }

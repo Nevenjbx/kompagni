@@ -1,22 +1,22 @@
 enum PetSize {
-  SMALL,
-  MEDIUM,
-  LARGE,
-  GIANT
+  small,
+  medium,
+  large,
+  giant
 }
 
 enum PetCharacter {
-  HAPPY,
-  ANGRY,
-  CALM,
-  SCARED,
-  ENERGETIC
+  happy,
+  angry,
+  calm,
+  scared,
+  energetic
 }
 
 enum AnimalType {
-  DOG,
-  CAT,
-  OTHER
+  dog,
+  cat,
+  other
 }
 
 class Pet {
@@ -43,10 +43,16 @@ class Pet {
       id: json['id'],
       ownerId: json['ownerId'],
       name: json['name'],
-      type: AnimalType.values.firstWhere((e) => e.toString() == 'AnimalType.${json['type']}'),
+      type: AnimalType.values.firstWhere(
+        (e) => e.name.toLowerCase() == json['type'].toString().toLowerCase(),
+      ),
       breed: json['breed'],
-      size: PetSize.values.firstWhere((e) => e.toString() == 'PetSize.${json['size']}'),
-      character: PetCharacter.values.firstWhere((e) => e.toString() == 'PetCharacter.${json['character']}'),
+      size: PetSize.values.firstWhere(
+        (e) => e.name.toLowerCase() == json['size'].toString().toLowerCase(),
+      ),
+      character: PetCharacter.values.firstWhere(
+        (e) => e.name.toLowerCase() == json['character'].toString().toLowerCase(),
+      ),
     );
   }
 

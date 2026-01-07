@@ -83,6 +83,6 @@ final isFavoriteProvider = Provider.family<bool, String>((ref, providerId) {
   return favoritesAsync.when(
     data: (favorites) => favorites.any((p) => p.id == providerId),
     loading: () => false,
-    error: (_, __) => false,
+    error: (error, stackTrace) => false,
   );
 });

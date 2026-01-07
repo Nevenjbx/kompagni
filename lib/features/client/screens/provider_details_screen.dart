@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:table_calendar/table_calendar.dart';
-import 'package:intl/intl.dart';
 import '../../../shared/models/provider.dart' as models;
 import '../../../shared/models/service.dart';
 import '../../../shared/providers/appointments_provider.dart';
 import '../../../shared/providers/favorites_provider.dart';
 import '../../../shared/providers/services_provider.dart';
+import '../widgets/provider_info_section.dart';
+import '../widgets/service_selection_card.dart';
+import '../widgets/booking_calendar.dart';
+import '../widgets/time_slots_grid.dart';
 
 class ProviderDetailsScreen extends ConsumerStatefulWidget {
   final models.Provider provider;
@@ -28,7 +31,6 @@ class _ProviderDetailsScreenState extends ConsumerState<ProviderDetailsScreen> {
   @override
   void initState() {
     super.initState();
-    // Load services for this provider
     Future.microtask(() {
       ref
           .read(servicesProvider.notifier)
@@ -49,7 +51,9 @@ class _ProviderDetailsScreenState extends ConsumerState<ProviderDetailsScreen> {
   Future<void> _bookAppointment() async {
     if (_selectedService == null ||
         _selectedDay == null ||
-        _selectedSlot == null) return;
+        _selectedSlot == null) {
+      return;
+    }
 
     setState(() {
       _isBooking = true;
@@ -113,7 +117,8 @@ class _ProviderDetailsScreenState extends ConsumerState<ProviderDetailsScreen> {
   @override
   Widget build(BuildContext context) {
     final isFavorite = ref.watch(isFavoriteProvider(widget.provider.id));
-    final servicesAsync = ref.watch(providerServicesProvider(widget.provider.id));
+    final servicesAsync =
+        ref.watch(providerServicesProvider(widget.provider.id));
 
     return Scaffold(
       appBar: AppBar(
@@ -134,7 +139,7 @@ class _ProviderDetailsScreenState extends ConsumerState<ProviderDetailsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Provider Info
-            _ProviderInfoSection(provider: widget.provider),
+            ProviderInfoSection(provider: widget.provider),
             const Divider(height: 32),
 
             // Services Selection
@@ -143,29 +148,19 @@ class _ProviderDetailsScreenState extends ConsumerState<ProviderDetailsScreen> {
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
-            _ServicesListSection(
-              servicesAsync: servicesAsync,
-              selectedService: _selectedService,
-              onServiceSelected: (service) {
-                setState(() {
-                  _selectedService =
-                      _selectedService?.id == service.id ? null : service;
-                  _selectedSlot = null;
-                });
-              },
-            ),
+            _buildServicesSection(servicesAsync),
 
             // Calendar and Slots (only if service selected)
             if (_selectedService != null) ...[
               const Divider(height: 32),
-              _CalendarSection(
+              BookingCalendar(
                 focusedDay: _focusedDay,
                 selectedDay: _selectedDay,
                 onDaySelected: _onDaySelected,
               ),
               if (_selectedDay != null) ...[
                 const SizedBox(height: 16),
-                _SlotsSection(
+                TimeSlotsGrid(
                   providerId: widget.provider.id,
                   serviceId: _selectedService!.id,
                   selectedDate: _selectedDay!,
@@ -182,57 +177,30 @@ class _ProviderDetailsScreenState extends ConsumerState<ProviderDetailsScreen> {
             const SizedBox(height: 32),
 
             // Book Button
-            _BookButton(
-              isBooking: _isBooking,
-              isEnabled: _selectedSlot != null,
-              onPressed: _bookAppointment,
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed:
+                    (_isBooking || _selectedSlot == null) ? null : _bookAppointment,
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+                child: _isBooking
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Confirmer le Rendez-vous'),
+              ),
             ),
           ],
         ),
       ),
     );
   }
-}
 
-/// Provider info section
-class _ProviderInfoSection extends StatelessWidget {
-  final models.Provider provider;
-
-  const _ProviderInfoSection({required this.provider});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          provider.description,
-          style: const TextStyle(fontSize: 16),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          '${provider.address}, ${provider.city} ${provider.postalCode}',
-          style: const TextStyle(color: Colors.grey),
-        ),
-      ],
-    );
-  }
-}
-
-/// Services list section
-class _ServicesListSection extends StatelessWidget {
-  final AsyncValue<List<Service>> servicesAsync;
-  final Service? selectedService;
-  final void Function(Service) onServiceSelected;
-
-  const _ServicesListSection({
-    required this.servicesAsync,
-    required this.selectedService,
-    required this.onServiceSelected,
-  });
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildServicesSection(AsyncValue<List<Service>> servicesAsync) {
     return servicesAsync.when(
       loading: () => const CircularProgressIndicator(),
       error: (error, _) => Text('Erreur : $error'),
@@ -248,233 +216,22 @@ class _ServicesListSection extends StatelessWidget {
           separatorBuilder: (context, index) => const SizedBox(height: 8),
           itemBuilder: (context, index) {
             final service = services[index];
-            final isSelected = selectedService?.id == service.id;
+            final isSelected = _selectedService?.id == service.id;
 
-            return _ServiceSelectionCard(
+            return ServiceSelectionCard(
               service: service,
               isSelected: isSelected,
-              onTap: () => onServiceSelected(service),
+              onTap: () {
+                setState(() {
+                  _selectedService =
+                      _selectedService?.id == service.id ? null : service;
+                  _selectedSlot = null;
+                });
+              },
             );
           },
         );
       },
-    );
-  }
-}
-
-/// Service selection card
-class _ServiceSelectionCard extends StatelessWidget {
-  final Service service;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  const _ServiceSelectionCard({
-    required this.service,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: isSelected ? Colors.blue[50] : Colors.white,
-      elevation: 1,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(
-          color: isSelected ? Colors.blue : Colors.transparent,
-          width: 2,
-        ),
-      ),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Text(
-                      service.name,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                  ),
-                  Text(
-                    '${service.price}€',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                      color: Theme.of(context).primaryColor,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  const Icon(Icons.timer_outlined, size: 16, color: Colors.grey),
-                  const SizedBox(width: 4),
-                  Text(
-                    '${service.duration} min',
-                    style: const TextStyle(color: Colors.grey),
-                  ),
-                ],
-              ),
-              if (service.description != null &&
-                  service.description!.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                Text(
-                  service.description!,
-                  style: const TextStyle(color: Colors.black87),
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Calendar section
-class _CalendarSection extends StatelessWidget {
-  final DateTime focusedDay;
-  final DateTime? selectedDay;
-  final void Function(DateTime, DateTime) onDaySelected;
-
-  const _CalendarSection({
-    required this.focusedDay,
-    required this.selectedDay,
-    required this.onDaySelected,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Choix de la date :',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-        ),
-        TableCalendar(
-          firstDay: DateTime.now(),
-          lastDay: DateTime.now().add(const Duration(days: 90)),
-          focusedDay: focusedDay,
-          selectedDayPredicate: (day) => isSameDay(selectedDay, day),
-          onDaySelected: onDaySelected,
-          calendarFormat: CalendarFormat.twoWeeks,
-          headerStyle: const HeaderStyle(
-            formatButtonVisible: false,
-            titleCentered: true,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-/// Available slots section
-class _SlotsSection extends ConsumerWidget {
-  final String providerId;
-  final String serviceId;
-  final DateTime selectedDate;
-  final String? selectedSlot;
-  final void Function(String?) onSlotSelected;
-
-  const _SlotsSection({
-    required this.providerId,
-    required this.serviceId,
-    required this.selectedDate,
-    required this.selectedSlot,
-    required this.onSlotSelected,
-  });
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final slotsParams = AvailableSlotsParams(
-      providerId: providerId,
-      serviceId: serviceId,
-      date: selectedDate,
-    );
-    final slotsAsync = ref.watch(availableSlotsProvider(slotsParams));
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Créneaux disponibles :',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 8),
-        slotsAsync.when(
-          loading: () => const CircularProgressIndicator(),
-          error: (error, _) => Text('Erreur: $error'),
-          data: (slots) {
-            if (slots.isEmpty) {
-              return const Text('Aucun créneau disponible ce jour.');
-            }
-
-            return Wrap(
-              spacing: 8.0,
-              runSpacing: 8.0,
-              children: slots.map((slotIso) {
-                final dt = DateTime.parse(slotIso);
-                final timeStr = DateFormat('HH:mm').format(dt);
-                final isSelected = selectedSlot == slotIso;
-
-                return ChoiceChip(
-                  label: Text(timeStr),
-                  selected: isSelected,
-                  onSelected: (selected) {
-                    onSlotSelected(selected ? slotIso : null);
-                  },
-                );
-              }).toList(),
-            );
-          },
-        ),
-      ],
-    );
-  }
-}
-
-/// Book appointment button
-class _BookButton extends StatelessWidget {
-  final bool isBooking;
-  final bool isEnabled;
-  final VoidCallback onPressed;
-
-  const _BookButton({
-    required this.isBooking,
-    required this.isEnabled,
-    required this.onPressed,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton(
-        onPressed: (isBooking || !isEnabled) ? null : onPressed,
-        style: ElevatedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(vertical: 16),
-        ),
-        child: isBooking
-            ? const SizedBox(
-                height: 20,
-                width: 20,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              )
-            : const Text('Confirmer le Rendez-vous'),
-      ),
     );
   }
 }

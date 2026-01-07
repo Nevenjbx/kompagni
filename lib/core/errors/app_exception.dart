@@ -1,5 +1,5 @@
-/// Custom exceptions for the application
-/// These provide structured error handling throughout the app
+// Custom exceptions for the application
+// These provide structured error handling throughout the app
 
 class AppException implements Exception {
   final String message;

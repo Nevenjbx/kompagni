@@ -34,7 +34,8 @@ class UserRepositoryImpl implements UserRepository {
   @override
   Future<void> syncUser({
     required String role,
-    String? name,
+    String? firstName,
+    String? lastName,
     String? phoneNumber,
     Map<String, dynamic>? providerProfile,
     List<String>? tags,
@@ -43,7 +44,8 @@ class UserRepositoryImpl implements UserRepository {
       '/users/sync',
       data: {
         'role': role,
-        'name': name,
+        'firstName': firstName,
+        'lastName': lastName,
         'phoneNumber': phoneNumber,
         'providerProfile': providerProfile != null
             ? {...providerProfile, 'tags': tags}

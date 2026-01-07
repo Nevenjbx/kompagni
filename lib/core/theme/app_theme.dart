@@ -11,7 +11,6 @@ class AppColors {
 class AppTheme {
   static ThemeData get light {
     final baseTextTheme = GoogleFonts.interTextTheme();
-    final headerTextTheme = GoogleFonts.spaceGroteskTextTheme();
 
     return ThemeData(
       useMaterial3: true,
@@ -20,7 +19,6 @@ class AppTheme {
         seedColor: AppColors.darkGreen,
         primary: AppColors.darkGreen,
         secondary: AppColors.brightGreen,
-        background: AppColors.lightBg,
         surface: AppColors.white,
       ),
       

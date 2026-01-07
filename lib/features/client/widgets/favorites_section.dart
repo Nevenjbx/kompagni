@@ -26,7 +26,7 @@ class FavoritesSection extends ConsumerWidget {
             height: 180,
             child: Center(child: CircularProgressIndicator()),
           ),
-          error: (_, __) => const Text(
+          error: (error, stackTrace) => const Text(
             'Erreur chargement favoris',
             style: TextStyle(color: Colors.red),
           ),
@@ -39,7 +39,7 @@ class FavoritesSection extends ConsumerWidget {
                   color: Theme.of(context)
                       .colorScheme
                       .surfaceContainerHighest
-                      .withOpacity(0.3),
+                      .withAlpha(76),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Center(

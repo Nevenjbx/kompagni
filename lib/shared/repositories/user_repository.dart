@@ -10,7 +10,8 @@ abstract class UserRepository {
   /// Sync the Supabase user with the backend database
   Future<void> syncUser({
     required String role,
-    String? name,
+    String? firstName,
+    String? lastName,
     String? phoneNumber,
     Map<String, dynamic>? providerProfile,
     List<String>? tags,

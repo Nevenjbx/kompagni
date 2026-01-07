@@ -102,7 +102,7 @@ class NextAppointmentSection extends ConsumerWidget {
                   color: Theme.of(context)
                       .colorScheme
                       .surfaceContainerHighest
-                      .withOpacity(0.3),
+                      .withAlpha(76),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Center(

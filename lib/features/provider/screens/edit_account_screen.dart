@@ -1,8 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl_phone_field/intl_phone_field.dart';
-import 'package:intl_phone_field/countries.dart';
-import 'package:flutter_typeahead/flutter_typeahead.dart';
 import '../../../core/errors/app_exception.dart';
 import '../../../shared/services/address_service.dart';
 import '../../../shared/models/provider.dart' as models;
@@ -10,6 +7,9 @@ import '../../../shared/repositories/impl/user_repository_impl.dart';
 import '../../../shared/repositories/impl/provider_repository_impl.dart';
 import '../../../shared/providers/provider_profile_provider.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../widgets/section_title.dart';
+import '../widgets/phone_input_field.dart';
+import '../widgets/address_form_section.dart';
 import 'manage_availability_screen.dart';
 
 class EditAccountScreen extends ConsumerStatefulWidget {
@@ -100,11 +100,9 @@ class _EditAccountScreenState extends ConsumerState<EditAccountScreen> {
         'longitude': _longitude,
       };
 
-      // Update provider profile
       final providerRepository = ref.read(providerRepositoryProvider);
       await providerRepository.updateProfile(updates);
 
-      // Update User details
       final userUpdates = <String, dynamic>{};
 
       if (_phoneNumber != null && _phoneNumber!.isNotEmpty) {
@@ -121,7 +119,6 @@ class _EditAccountScreenState extends ConsumerState<EditAccountScreen> {
         await userRepository.updateUser(userUpdates);
       }
 
-      // Invalidate provider profile to refresh
       ref.invalidate(providerProfileProvider);
 
       if (mounted) {
@@ -180,7 +177,6 @@ class _EditAccountScreenState extends ConsumerState<EditAccountScreen> {
       final userRepository = ref.read(userRepositoryProvider);
       await userRepository.deleteAccount();
 
-      // Sign out
       final authService = ref.read(authServiceProvider);
       await authService.signOut();
 
@@ -213,26 +209,51 @@ class _EditAccountScreenState extends ConsumerState<EditAccountScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     // General Info Section
-                    _SectionTitle(title: 'Informations Générales'),
+                    const SectionTitle(title: 'Informations Générales'),
                     const SizedBox(height: 16),
-                    _BusinessNameField(controller: _businessNameController),
+                    TextFormField(
+                      controller: _businessNameController,
+                      decoration: const InputDecoration(
+                        labelText: 'Nom de l\'entreprise',
+                        prefixIcon: Icon(Icons.business),
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (value) =>
+                          value == null || value.isEmpty ? 'Champ requis' : null,
+                    ),
                     const SizedBox(height: 16),
-                    _DescriptionField(controller: _descriptionController),
+                    TextFormField(
+                      controller: _descriptionController,
+                      decoration: const InputDecoration(
+                        labelText: 'Description',
+                        prefixIcon: Icon(Icons.description),
+                        border: OutlineInputBorder(),
+                      ),
+                      maxLines: 3,
+                    ),
                     const SizedBox(height: 24),
 
                     // Contact Section
-                    _SectionTitle(title: 'Coordonnées'),
+                    const SectionTitle(title: 'Coordonnées'),
                     const SizedBox(height: 16),
-                    _EmailField(controller: _emailController),
+                    TextFormField(
+                      controller: _emailController,
+                      decoration: const InputDecoration(
+                        labelText: 'Email',
+                        prefixIcon: Icon(Icons.email),
+                        border: OutlineInputBorder(),
+                      ),
+                      keyboardType: TextInputType.emailAddress,
+                    ),
                     const SizedBox(height: 16),
-                    _PhoneField(
+                    PhoneInputField(
                       phoneNumber: _phoneNumber,
                       onChanged: (phone) => _phoneNumber = phone,
                     ),
                     const SizedBox(height: 16),
 
                     // Address Section
-                    _AddressSection(
+                    AddressFormSection(
                       addressController: _addressController,
                       cityController: _cityController,
                       postalCodeController: _postalCodeController,
@@ -251,7 +272,16 @@ class _EditAccountScreenState extends ConsumerState<EditAccountScreen> {
                     const SizedBox(height: 32),
 
                     // Availability Link
-                    _AvailabilityButton(
+                    OutlinedButton.icon(
+                      icon: const Icon(Icons.schedule),
+                      label: const Text('Gérer mes horaires d\'ouverture'),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.all(16),
+                        alignment: Alignment.centerLeft,
+                        textStyle: const TextStyle(fontSize: 16),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8)),
+                      ),
                       onPressed: () {
                         Navigator.of(context).push(
                           MaterialPageRoute(
@@ -282,7 +312,8 @@ class _EditAccountScreenState extends ConsumerState<EditAccountScreen> {
                     Center(
                       child: TextButton.icon(
                         onPressed: _deleteAccount,
-                        icon: const Icon(Icons.delete_forever, color: Colors.red),
+                        icon:
+                            const Icon(Icons.delete_forever, color: Colors.red),
                         label: const Text(
                           'Supprimer mon compte',
                           style: TextStyle(color: Colors.red),
@@ -296,211 +327,6 @@ class _EditAccountScreenState extends ConsumerState<EditAccountScreen> {
                 ),
               ),
             ),
-    );
-  }
-}
-
-// ============================================================================
-// EXTRACTED WIDGETS
-// ============================================================================
-
-class _SectionTitle extends StatelessWidget {
-  final String title;
-
-  const _SectionTitle({required this.title});
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      title,
-      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-    );
-  }
-}
-
-class _BusinessNameField extends StatelessWidget {
-  final TextEditingController controller;
-
-  const _BusinessNameField({required this.controller});
-
-  @override
-  Widget build(BuildContext context) {
-    return TextFormField(
-      controller: controller,
-      decoration: const InputDecoration(
-        labelText: 'Nom de l\'entreprise',
-        prefixIcon: Icon(Icons.business),
-        border: OutlineInputBorder(),
-      ),
-      validator: (value) =>
-          value == null || value.isEmpty ? 'Champ requis' : null,
-    );
-  }
-}
-
-class _DescriptionField extends StatelessWidget {
-  final TextEditingController controller;
-
-  const _DescriptionField({required this.controller});
-
-  @override
-  Widget build(BuildContext context) {
-    return TextFormField(
-      controller: controller,
-      decoration: const InputDecoration(
-        labelText: 'Description',
-        prefixIcon: Icon(Icons.description),
-        border: OutlineInputBorder(),
-      ),
-      maxLines: 3,
-    );
-  }
-}
-
-class _EmailField extends StatelessWidget {
-  final TextEditingController controller;
-
-  const _EmailField({required this.controller});
-
-  @override
-  Widget build(BuildContext context) {
-    return TextFormField(
-      controller: controller,
-      decoration: const InputDecoration(
-        labelText: 'Email',
-        prefixIcon: Icon(Icons.email),
-        border: OutlineInputBorder(),
-      ),
-      keyboardType: TextInputType.emailAddress,
-    );
-  }
-}
-
-class _PhoneField extends StatelessWidget {
-  final String? phoneNumber;
-  final ValueChanged<String> onChanged;
-
-  const _PhoneField({
-    required this.phoneNumber,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return IntlPhoneField(
-      key: Key(phoneNumber ?? 'phone_field'),
-      decoration: const InputDecoration(
-        labelText: 'Numéro de téléphone',
-        border: OutlineInputBorder(),
-      ),
-      initialCountryCode: 'FR',
-      initialValue: phoneNumber,
-      countries: const [
-        Country(
-          name: "France",
-          nameTranslations: {"fr": "France", "en": "France"},
-          flag: "🇫🇷",
-          code: "FR",
-          dialCode: "33",
-          minLength: 9,
-          maxLength: 9,
-        ),
-      ],
-      onChanged: (phone) => onChanged(phone.completeNumber),
-    );
-  }
-}
-
-class _AddressSection extends StatelessWidget {
-  final TextEditingController addressController;
-  final TextEditingController cityController;
-  final TextEditingController postalCodeController;
-  final AddressService addressService;
-  final void Function(AddressResult) onAddressSelected;
-
-  const _AddressSection({
-    required this.addressController,
-    required this.cityController,
-    required this.postalCodeController,
-    required this.addressService,
-    required this.onAddressSelected,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        TypeAheadField<AddressResult>(
-          controller: addressController,
-          builder: (context, controller, focusNode) {
-            return TextField(
-              controller: controller,
-              focusNode: focusNode,
-              decoration: const InputDecoration(
-                labelText: 'Adresse',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.location_on),
-              ),
-            );
-          },
-          suggestionsCallback: (pattern) async {
-            return await addressService.searchAddress(pattern);
-          },
-          itemBuilder: (context, suggestion) {
-            return ListTile(
-              leading: const Icon(Icons.location_on),
-              title: Text(suggestion.displayName),
-            );
-          },
-          onSelected: onAddressSelected,
-        ),
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            Expanded(
-              child: TextFormField(
-                controller: postalCodeController,
-                decoration: const InputDecoration(
-                  labelText: 'Code Postal',
-                  border: OutlineInputBorder(),
-                ),
-                keyboardType: TextInputType.number,
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: TextFormField(
-                controller: cityController,
-                decoration: const InputDecoration(
-                  labelText: 'Ville',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-class _AvailabilityButton extends StatelessWidget {
-  final VoidCallback onPressed;
-
-  const _AvailabilityButton({required this.onPressed});
-
-  @override
-  Widget build(BuildContext context) {
-    return OutlinedButton.icon(
-      icon: const Icon(Icons.schedule),
-      label: const Text('Gérer mes horaires d\'ouverture'),
-      style: OutlinedButton.styleFrom(
-        padding: const EdgeInsets.all(16),
-        alignment: Alignment.centerLeft,
-        textStyle: const TextStyle(fontSize: 16),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      ),
-      onPressed: onPressed,
     );
   }
 }

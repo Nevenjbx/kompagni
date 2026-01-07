@@ -116,7 +116,8 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
         final userRepository = ref.read(userRepositoryProvider);
         await userRepository.syncUser(
           role: _isProvider ? 'PROVIDER' : 'CLIENT',
-          name: name,
+          firstName: firstName,
+          lastName: lastName,
           phoneNumber: _phoneNumber,
           providerProfile: providerProfile,
           tags: _isProvider ? _selectedTags : null,

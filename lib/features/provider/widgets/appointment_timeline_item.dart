@@ -46,7 +46,7 @@ class AppointmentTimelineItem extends StatelessWidget {
           Container(
             width: 2,
             height: 80,
-            color: statusColor.withOpacity(0.5),
+            color: statusColor.withAlpha(128),
             margin: const EdgeInsets.symmetric(horizontal: 12),
           ),
 
@@ -58,7 +58,7 @@ class AppointmentTimelineItem extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
+                    color: Colors.black.withAlpha(13),
                     blurRadius: 4,
                     offset: const Offset(0, 2),
                   ),
@@ -87,7 +87,7 @@ class AppointmentTimelineItem extends StatelessWidget {
                           vertical: 2,
                         ),
                         decoration: BoxDecoration(
-                          color: statusColor.withOpacity(0.1),
+                          color: statusColor.withAlpha(25),
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(

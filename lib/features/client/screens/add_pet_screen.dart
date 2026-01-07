@@ -14,31 +14,31 @@ class _AddPetScreenState extends ConsumerState<AddPetScreen> {
   final _formKey = GlobalKey<FormState>();
 
   String _name = '';
-  AnimalType _type = AnimalType.DOG;
+  AnimalType _type = AnimalType.dog;
   String _breed = '';
-  PetSize _size = PetSize.SMALL;
-  PetCharacter _character = PetCharacter.HAPPY;
+  PetSize _size = PetSize.small;
+  PetCharacter _character = PetCharacter.happy;
   bool _isLoading = false;
 
   static const Map<AnimalType, String> _typeLabels = {
-    AnimalType.DOG: 'Chien',
-    AnimalType.CAT: 'Chat',
-    AnimalType.OTHER: 'Autre',
+    AnimalType.dog: 'Chien',
+    AnimalType.cat: 'Chat',
+    AnimalType.other: 'Autre',
   };
 
   static const Map<PetSize, String> _sizeLabels = {
-    PetSize.SMALL: 'Petit',
-    PetSize.MEDIUM: 'Moyen',
-    PetSize.LARGE: 'Grand',
-    PetSize.GIANT: 'Géant',
+    PetSize.small: 'Petit',
+    PetSize.medium: 'Moyen',
+    PetSize.large: 'Grand',
+    PetSize.giant: 'Géant',
   };
 
   static const Map<PetCharacter, String> _characterLabels = {
-    PetCharacter.HAPPY: 'Joyeux',
-    PetCharacter.ANGRY: 'Énervé',
-    PetCharacter.CALM: 'Calme',
-    PetCharacter.SCARED: 'Peureux',
-    PetCharacter.ENERGETIC: 'Énergique',
+    PetCharacter.happy: 'Joyeux',
+    PetCharacter.angry: 'Énervé',
+    PetCharacter.calm: 'Calme',
+    PetCharacter.scared: 'Peureux',
+    PetCharacter.energetic: 'Énergique',
   };
 
   Future<void> _submit() async {

@@ -23,7 +23,7 @@ class AppointmentCard extends StatelessWidget {
       elevation: isNext ? 0 : 1,
       margin: const EdgeInsets.only(bottom: 12),
       color: isNext
-          ? Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3)
+          ? Theme.of(context).colorScheme.primaryContainer.withAlpha(76)
           : Theme.of(context).cardColor,
       child: InkWell(
         onTap: canInteract ? onTap : null,

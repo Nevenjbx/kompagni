@@ -10,6 +10,7 @@ class Provider {
   final String postalCode;
   final double? latitude;
   final double? longitude;
+  final List<String> tags;
   final List<Service> services;
   final List<WorkingHours> workingHours;
 
@@ -22,6 +23,7 @@ class Provider {
     required this.postalCode,
     this.latitude,
     this.longitude,
+    this.tags = const [],
     this.services = const [],
     this.workingHours = const [],
   });
@@ -36,6 +38,7 @@ class Provider {
       postalCode: json['postalCode'] ?? '',
       latitude: json['latitude'] != null ? (json['latitude'] as num).toDouble() : null,
       longitude: json['longitude'] != null ? (json['longitude'] as num).toDouble() : null,
+      tags: (json['tags'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
       services: (json['services'] as List<dynamic>?)
               ?.map((e) => Service.fromJson(e))
               .toList() ??
@@ -57,6 +60,7 @@ class Provider {
       'postalCode': postalCode,
       'latitude': latitude,
       'longitude': longitude,
+      'tags': tags,
       'services': services.map((s) => s.toJson()).toList(),
       'workingHours': workingHours.map((wh) => wh.toJson()).toList(),
     };
@@ -71,6 +75,7 @@ class Provider {
     String? postalCode,
     double? latitude,
     double? longitude,
+    List<String>? tags,
     List<Service>? services,
     List<WorkingHours>? workingHours,
   }) {
@@ -83,6 +88,7 @@ class Provider {
       postalCode: postalCode ?? this.postalCode,
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
+      tags: tags ?? this.tags,
       services: services ?? this.services,
       workingHours: workingHours ?? this.workingHours,
     );

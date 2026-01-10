@@ -1,12 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl_phone_field/intl_phone_field.dart';
-import 'package:intl_phone_field/countries.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../../shared/repositories/user_repository.dart';
 import '../../../shared/repositories/impl/user_repository_impl.dart';
 import '../../../core/errors/app_exception.dart';
+import '../widgets/profile_section_title.dart';
+import '../widgets/personal_info_form_section.dart';
+import '../widgets/contact_info_form_section.dart';
+import '../widgets/profile_action_buttons.dart';
 import 'my_pets_screen.dart';
 
+/// Client profile screen for viewing and editing user account information.
+/// 
+/// This screen has been refactored to use modular widgets:
+/// - [PersonalInfoFormSection] for name fields
+/// - [ContactInfoFormSection] for email and phone
+/// - [ProfileActionButtons] for save, logout, delete actions
 class ClientProfileScreen extends ConsumerStatefulWidget {
   const ClientProfileScreen({super.key});
 
@@ -225,100 +234,26 @@ class _ClientProfileScreenState extends ConsumerState<ClientProfileScreen> {
                       ),
                       const SizedBox(height: 32),
 
-                      // Section: Informations personnelles
-                      _SectionTitle(title: 'Informations personnelles'),
-                      const SizedBox(height: 16),
-
-                      // Prénom
-                      TextFormField(
-                        controller: _firstNameController,
-                        decoration: const InputDecoration(
-                          labelText: 'Prénom',
-                          prefixIcon: Icon(Icons.person_outline),
-                          border: OutlineInputBorder(),
-                        ),
-                        textCapitalization: TextCapitalization.words,
-                        validator: (value) => value == null || value.isEmpty
-                            ? 'Le prénom est requis'
-                            : null,
-                        onChanged: (_) => _onFieldChanged(),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Nom
-                      TextFormField(
-                        controller: _lastNameController,
-                        decoration: const InputDecoration(
-                          labelText: 'Nom',
-                          prefixIcon: Icon(Icons.person_outline),
-                          border: OutlineInputBorder(),
-                        ),
-                        textCapitalization: TextCapitalization.words,
-                        validator: (value) => value == null || value.isEmpty
-                            ? 'Le nom est requis'
-                            : null,
-                        onChanged: (_) => _onFieldChanged(),
+                      // Personal Info Section
+                      PersonalInfoFormSection(
+                        firstNameController: _firstNameController,
+                        lastNameController: _lastNameController,
+                        onFieldChanged: _onFieldChanged,
                       ),
                       const SizedBox(height: 24),
 
-                      // Section: Coordonnées
-                      _SectionTitle(title: 'Coordonnées'),
-                      const SizedBox(height: 16),
-
-                      // Email
-                      TextFormField(
-                        controller: _emailController,
-                        decoration: const InputDecoration(
-                          labelText: 'Email',
-                          prefixIcon: Icon(Icons.email_outlined),
-                          border: OutlineInputBorder(),
-                        ),
-                        keyboardType: TextInputType.emailAddress,
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'L\'email est requis';
-                          }
-                          if (!value.contains('@')) {
-                            return 'Veuillez entrer un email valide';
-                          }
-                          return null;
-                        },
-                        onChanged: (_) => _onFieldChanged(),
+                      // Contact Info Section
+                      ContactInfoFormSection(
+                        emailController: _emailController,
+                        phoneNumber: _phoneNumber,
+                        onPhoneChanged: (phone) => _phoneNumber = phone,
+                        onFieldChanged: _onFieldChanged,
                       ),
-                      const SizedBox(height: 16),
-
-                      // Téléphone
-                      IntlPhoneField(
-                        key: Key(_phoneNumber ?? 'phone_field'),
-                        decoration: const InputDecoration(
-                          labelText: 'Numéro de téléphone',
-                          border: OutlineInputBorder(),
-                        ),
-                        initialCountryCode: 'FR',
-                        initialValue: _phoneNumber,
-                        countries: const [
-                          Country(
-                            name: "France",
-                            nameTranslations: {"fr": "France", "en": "France"},
-                            flag: "🇫🇷",
-                            code: "FR",
-                            dialCode: "33",
-                            minLength: 9,
-                            maxLength: 9,
-                          ),
-                        ],
-                        onChanged: (phone) {
-                          _phoneNumber = phone.completeNumber;
-                          _onFieldChanged();
-                        },
-                      ),
-
                       const SizedBox(height: 24),
 
-                      // Section: Mes Animaux
-                      _SectionTitle(title: 'Mes Animaux'),
+                      // My Pets Section
+                      const ProfileSectionTitle(title: 'Mes Animaux'),
                       const SizedBox(height: 16),
-
                       OutlinedButton.icon(
                         onPressed: () {
                           Navigator.of(context).push(
@@ -334,87 +269,20 @@ class _ClientProfileScreenState extends ConsumerState<ClientProfileScreen> {
                           textStyle: const TextStyle(fontSize: 16),
                         ),
                       ),
-
                       const SizedBox(height: 32),
 
-                      // Save Button
-                      ElevatedButton.icon(
-                        onPressed: _hasChanges && !_isSaving ? _saveProfile : null,
-                        icon: _isSaving
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
-                                ),
-                              )
-                            : const Icon(Icons.save),
-                        label: const Text('Enregistrer les modifications'),
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          textStyle: const TextStyle(fontSize: 16),
-                        ),
-                      ),
-
-                      const SizedBox(height: 32),
-
-                      // Logout Button
-                      OutlinedButton.icon(
-                        onPressed: () async {
-                          final authService = ref.read(authServiceProvider);
-                          await authService.signOut();
-                        },
-                        icon: const Icon(Icons.logout),
-                        label: const Text('Me déconnecter'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.orange,
-                          side: const BorderSide(color: Colors.orange),
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                        ),
-                      ),
-
-                      const SizedBox(height: 48),
-                      const Divider(),
-                      const SizedBox(height: 16),
-
-                      // Delete Account
-                      Center(
-                        child: TextButton.icon(
-                          onPressed: _deleteAccount,
-                          icon:
-                              const Icon(Icons.delete_forever, color: Colors.red),
-                          label: const Text(
-                            'Supprimer mon compte',
-                            style: TextStyle(color: Colors.red),
-                          ),
-                          style: TextButton.styleFrom(
-                            padding: const EdgeInsets.all(16),
-                          ),
-                        ),
+                      // Action Buttons
+                      ProfileActionButtons(
+                        hasChanges: _hasChanges,
+                        isSaving: _isSaving,
+                        onSave: _saveProfile,
+                        onDelete: _deleteAccount,
                       ),
                     ],
                   ),
                 ),
               ),
             ),
-    );
-  }
-}
-
-class _SectionTitle extends StatelessWidget {
-  final String title;
-
-  const _SectionTitle({required this.title});
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      title,
-      style: const TextStyle(
-        fontSize: 18,
-        fontWeight: FontWeight.bold,
-      ),
     );
   }
 }

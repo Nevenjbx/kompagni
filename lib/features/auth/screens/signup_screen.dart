@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../shared/services/address_service.dart';
-import '../services/auth_service.dart';
-import '../../../shared/repositories/impl/user_repository_impl.dart';
+import '../providers/auth_provider.dart';
+import '../../../shared/repositories/user_repository.dart';
+import '../../../shared/repositories/impl/user_repository_impl.dart'; // For userRepositoryProvider
 import '../widgets/personal_info_form.dart';
 import '../widgets/credentials_form.dart';
 import '../widgets/provider_info_form.dart';
@@ -20,7 +21,7 @@ class SignUpScreen extends ConsumerStatefulWidget {
 }
 
 class _SignUpScreenState extends ConsumerState<SignUpScreen> {
-  final AuthService _authService = AuthService();
+  // AuthService accessed via ref.read(authServiceProvider)
   final AddressService _addressService = AddressService();
 
   // Form controllers
@@ -100,7 +101,8 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
       }
 
       // Sign up with Supabase
-      final response = await _authService.signUpEmailPassword(
+      final authService = ref.read(authServiceProvider);
+      final response = await authService.signUpEmailPassword(
         email,
         password,
         data: {

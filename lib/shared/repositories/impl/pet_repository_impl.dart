@@ -22,6 +22,17 @@ class PetRepositoryImpl implements PetRepository {
   }
 
   @override
+  Future<List<Pet>> getUserPets(String userId) async {
+    final response = await _dio.get('/pets/user/$userId');
+    
+    if (response.statusCode == 200) {
+      final List<dynamic> data = response.data;
+      return data.map((json) => Pet.fromJson(json)).toList();
+    }
+    return [];
+  }
+
+  @override
   Future<void> addPet({
     required String name,
     required AnimalType type,
@@ -44,6 +55,24 @@ class PetRepositoryImpl implements PetRepository {
   @override
   Future<void> deletePet(String id) async {
     await _dio.delete('/pets/$id');
+  }
+
+  @override
+  Future<String?> getPetNote(String petId) async {
+    try {
+      final response = await _dio.get('/pets/$petId/note');
+      return response.data['note'] as String?;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  @override
+  Future<void> updatePetNote(String petId, String note) async {
+    await _dio.post(
+      '/pets/$petId/note',
+      data: {'note': note},
+    );
   }
 }
 

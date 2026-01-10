@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../shared/models/appointment.dart';
-import '../../shared/repositories/impl/appointment_repository_impl.dart';
+import '../../shared/repositories/appointment_repository.dart';
+import '../../shared/repositories/impl/appointment_repository_impl.dart'; // For appointmentRepositoryProvider
 
 /// Provider for managing client/provider appointments state
 /// 
@@ -25,7 +26,11 @@ class AppointmentsNotifier extends AsyncNotifier<List<Appointment>> {
 
   Future<List<Appointment>> _fetchAppointments() async {
     final repository = ref.read(appointmentRepositoryProvider);
-    return repository.getMyAppointments();
+    // Fetch paginated result and extract items for backward compatibility
+    // Note: For full pagination support in UI, a separate PaginatedAppointmentsNotifier
+    // could be created that exposes the full PaginatedResult
+    final result = await repository.getMyAppointments(page: 1, limit: 100);
+    return result.items;
   }
 
   /// Refresh the appointments list

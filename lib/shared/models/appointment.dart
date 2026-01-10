@@ -115,26 +115,29 @@ enum AppointmentStatus {
   String get displayName {
     switch (this) {
       case AppointmentStatus.pending:
-        return 'En attente';
+        return 'Prochainement';
       case AppointmentStatus.confirmed:
-        return 'Confirmé';
+        return 'Prochainement'; // Treated same as pending for display
       case AppointmentStatus.completed:
-        return 'Terminé';
+        return 'Fait';
       case AppointmentStatus.cancelled:
         return 'Annulé';
     }
   }
 }
 
-/// Simplified client info returned with appointments
 class AppointmentClient {
   final String id;
-  final String? name;
+  final String? firstName;
+  final String? lastName;
+  final String? name; // Keep for backward compatibility if needed
   final String email;
   final String? phoneNumber;
 
   const AppointmentClient({
     required this.id,
+    this.firstName,
+    this.lastName,
     this.name,
     required this.email,
     this.phoneNumber,
@@ -143,11 +146,20 @@ class AppointmentClient {
   factory AppointmentClient.fromJson(Map<String, dynamic> json) {
     return AppointmentClient(
       id: json['id'] as String,
+      firstName: json['firstName'] as String?,
+      lastName: json['lastName'] as String?,
       name: json['name'] as String?,
       email: json['email'] as String? ?? '',
       phoneNumber: json['phoneNumber'] as String?,
     );
   }
 
-  String get displayName => name ?? email;
+  String get displayName {
+    if (firstName != null && lastName != null) {
+      return '$firstName $lastName';
+    }
+    if (firstName != null) return firstName!;
+    if (lastName != null) return lastName!;
+    return name ?? email;
+  }
 }

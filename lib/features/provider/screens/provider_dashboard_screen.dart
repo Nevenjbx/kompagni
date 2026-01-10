@@ -4,7 +4,7 @@ import 'package:table_calendar/table_calendar.dart'; // Needed for isSameDay
 import '../../../shared/models/appointment.dart';
 import '../../../shared/providers/appointments_provider.dart';
 import '../../../shared/providers/provider_profile_provider.dart';
-import '../../auth/services/auth_service.dart';
+import '../../auth/providers/auth_provider.dart';
 import '../widgets/dashboard_header.dart';
 import '../widgets/services_carousel.dart';
 import '../widgets/calendar_section.dart';
@@ -34,7 +34,7 @@ class _ProviderDashboardScreenState
   }
 
   Future<void> _signOut(BuildContext context) async {
-    await AuthService().signOut();
+    await ref.read(authServiceProvider).signOut();
     // Navigation handled by GoRouter stream
   }
 

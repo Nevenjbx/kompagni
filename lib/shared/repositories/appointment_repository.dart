@@ -1,9 +1,16 @@
 import '../models/appointment.dart';
+import '../models/paginated_result.dart';
 
 /// Repository interface for appointment-related operations
 abstract class AppointmentRepository {
   /// Get all appointments for the current user (as client or provider)
-  Future<List<Appointment>> getMyAppointments();
+  /// 
+  /// Supports pagination with [page] (1-indexed) and [limit] parameters.
+  /// Returns a [PaginatedResult] containing items and pagination metadata.
+  Future<PaginatedResult<Appointment>> getMyAppointments({
+    int page = 1,
+    int limit = 20,
+  });
 
   /// Get available time slots for a service on a specific date
   Future<List<String>> getAvailableSlots(
@@ -20,6 +27,10 @@ abstract class AppointmentRepository {
     String? notes,
   });
 
+  /// Update appointment status
+  Future<void> updateStatus(String id, AppointmentStatus status);
+
   /// Cancel an appointment
   Future<void> cancelAppointment(String id);
 }
+

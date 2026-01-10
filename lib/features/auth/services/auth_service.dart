@@ -22,7 +22,20 @@ class AuthService {
     await _supabase.auth.signOut();
   }
 
+  /// Refresh the current session token
+  /// 
+  /// Returns true if refresh was successful, false otherwise.
+  Future<bool> refreshSession() async {
+    try {
+      final response = await _supabase.auth.refreshSession();
+      return response.session != null;
+    } catch (e) {
+      return false;
+    }
+  }
+
   User? get currentUser => _supabase.auth.currentUser;
 
   Stream<AuthState> get authStateChanges => _supabase.auth.onAuthStateChange;
 }
+

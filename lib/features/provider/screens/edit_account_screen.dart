@@ -1,17 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl_phone_field/intl_phone_field.dart';
+import 'package:intl_phone_field/countries.dart';
 import '../../../core/errors/app_exception.dart';
 import '../../../shared/services/address_service.dart';
 import '../../../shared/models/provider.dart' as models;
+import '../../../shared/repositories/user_repository.dart';
 import '../../../shared/repositories/impl/user_repository_impl.dart';
+import '../../../shared/repositories/provider_repository.dart';
 import '../../../shared/repositories/impl/provider_repository_impl.dart';
 import '../../../shared/providers/provider_profile_provider.dart';
 import '../../auth/providers/auth_provider.dart';
-import '../widgets/section_title.dart';
-import '../widgets/phone_input_field.dart';
+import '../widgets/provider_section_title.dart';
+import '../widgets/tags_editor.dart';
 import '../widgets/address_form_section.dart';
 import 'manage_availability_screen.dart';
 
+/// Provider account editing screen.
+/// 
+/// Refactored to match client_profile_screen pattern with:
+/// - Modular widgets for each section
+/// - Supabase Auth sync via backend API
+/// - Tags management
 class EditAccountScreen extends ConsumerStatefulWidget {
   final models.Provider provider;
 
@@ -24,73 +34,96 @@ class EditAccountScreen extends ConsumerStatefulWidget {
 class _EditAccountScreenState extends ConsumerState<EditAccountScreen> {
   final _formKey = GlobalKey<FormState>();
   final _addressService = AddressService();
+  
   bool _isLoading = false;
+  bool _isSaving = false;
+  bool _hasChanges = false;
 
+  // User info controllers
+  late TextEditingController _emailController;
+  String? _phoneNumber;
+
+  // Provider info controllers
   late TextEditingController _businessNameController;
   late TextEditingController _descriptionController;
   late TextEditingController _addressController;
   late TextEditingController _cityController;
   late TextEditingController _postalCodeController;
-  late TextEditingController _emailController;
 
-  String? _phoneNumber;
+  // Location
   double? _latitude;
   double? _longitude;
+
+  // Tags
+  late List<String> _selectedTags;
 
   @override
   void initState() {
     super.initState();
-    _businessNameController =
-        TextEditingController(text: widget.provider.businessName);
-    _descriptionController =
-        TextEditingController(text: widget.provider.description);
+    // User info
+    _emailController = TextEditingController();
+
+    // Provider info
+    _businessNameController = TextEditingController(text: widget.provider.businessName);
+    _descriptionController = TextEditingController(text: widget.provider.description);
     _addressController = TextEditingController(text: widget.provider.address);
     _cityController = TextEditingController(text: widget.provider.city);
-    _postalCodeController =
-        TextEditingController(text: widget.provider.postalCode);
-    _emailController = TextEditingController();
+    _postalCodeController = TextEditingController(text: widget.provider.postalCode);
 
     _latitude = widget.provider.latitude;
     _longitude = widget.provider.longitude;
+    _selectedTags = List<String>.from(widget.provider.tags);
 
     _loadUserData();
   }
 
-  Future<void> _loadUserData() async {
-    try {
-      final userRepository = ref.read(userRepositoryProvider);
-      final userData = await userRepository.getCurrentUser();
-      if (userData != null && mounted) {
-        setState(() {
-          _emailController.text = userData['email'] ?? '';
-          if (userData['phoneNumber'] != null) {
-            _phoneNumber = userData['phoneNumber'].toString();
-          }
-        });
-      }
-    } catch (e) {
-      // Ignore silently
-    }
-  }
-
   @override
   void dispose() {
+    _emailController.dispose();
     _businessNameController.dispose();
     _descriptionController.dispose();
     _addressController.dispose();
     _cityController.dispose();
     _postalCodeController.dispose();
-    _emailController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadUserData() async {
+    setState(() => _isLoading = true);
+
+    try {
+      final userRepository = ref.read(userRepositoryProvider);
+      final userData = await userRepository.getCurrentUser();
+
+      if (userData != null && mounted) {
+        setState(() {
+          _emailController.text = userData['email'] ?? '';
+          _phoneNumber = userData['phoneNumber'];
+        });
+      }
+    } catch (e) {
+      // Ignore silently - user data will just be empty
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  void _onFieldChanged() {
+    if (!_hasChanges) {
+      setState(() => _hasChanges = true);
+    }
   }
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() => _isLoading = true);
+    setState(() => _isSaving = true);
 
     try {
-      final updates = {
+      // 1. Update provider profile (includes tags)
+      final providerUpdates = {
         'businessName': _businessNameController.text.trim(),
         'description': _descriptionController.text.trim(),
         'address': _addressController.text.trim(),
@@ -98,20 +131,22 @@ class _EditAccountScreenState extends ConsumerState<EditAccountScreen> {
         'postalCode': _postalCodeController.text.trim(),
         'latitude': _latitude,
         'longitude': _longitude,
+        'tags': _selectedTags,
       };
 
       final providerRepository = ref.read(providerRepositoryProvider);
-      await providerRepository.updateProfile(updates);
+      await providerRepository.updateProfile(providerUpdates);
 
+      // 2. Update user info (syncs with Supabase Auth automatically via backend)
       final userUpdates = <String, dynamic>{};
 
-      if (_phoneNumber != null && _phoneNumber!.isNotEmpty) {
-        userUpdates['phoneNumber'] = _phoneNumber;
-      }
-
       final email = _emailController.text.trim();
+
       if (email.isNotEmpty) {
         userUpdates['email'] = email;
+      }
+      if (_phoneNumber != null && _phoneNumber!.isNotEmpty) {
+        userUpdates['phoneNumber'] = _phoneNumber;
       }
 
       if (userUpdates.isNotEmpty) {
@@ -119,16 +154,21 @@ class _EditAccountScreenState extends ConsumerState<EditAccountScreen> {
         await userRepository.updateUser(userUpdates);
       }
 
+      // Refresh provider profile
       ref.invalidate(providerProfileProvider);
 
       if (mounted) {
+        setState(() => _hasChanges = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Profil mis à jour !')),
+          const SnackBar(
+            content: Text('Profil mis à jour avec succès !'),
+            backgroundColor: Colors.green,
+          ),
         );
         Navigator.of(context).pop(true);
       }
     } catch (e) {
-      String errorMessage = 'Erreur: $e';
+      String errorMessage = 'Erreur lors de la sauvegarde';
       if (e is AppException) {
         errorMessage = e.message;
       }
@@ -137,12 +177,15 @@ class _EditAccountScreenState extends ConsumerState<EditAccountScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(errorMessage),
+            backgroundColor: Colors.red,
             duration: const Duration(seconds: 5),
           ),
         );
       }
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
     }
   }
 
@@ -153,7 +196,8 @@ class _EditAccountScreenState extends ConsumerState<EditAccountScreen> {
         title: const Text('Supprimer mon compte'),
         content: const Text(
           'Êtes-vous sûr de vouloir supprimer votre compte ?\n\n'
-          'Cette action est irréversible et supprimera toutes vos données.',
+          'Cette action est irréversible et supprimera toutes vos données, '
+          'y compris vos rendez-vous et services.',
         ),
         actions: [
           TextButton(
@@ -171,25 +215,23 @@ class _EditAccountScreenState extends ConsumerState<EditAccountScreen> {
 
     if (confirmed != true) return;
 
-    setState(() => _isLoading = true);
+    setState(() => _isSaving = true);
 
     try {
+      // Delete account (syncs with Supabase Auth via backend)
       final userRepository = ref.read(userRepositoryProvider);
       await userRepository.deleteAccount();
 
+      // Sign out
       final authService = ref.read(authServiceProvider);
       await authService.signOut();
-
-      if (mounted) {
-        Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
-      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Erreur lors de la suppression: $e')),
         );
+        setState(() => _isSaving = false);
       }
-      setState(() => _isLoading = false);
     }
   }
 
@@ -198,132 +240,219 @@ class _EditAccountScreenState extends ConsumerState<EditAccountScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Modifier mon compte'),
+        actions: [
+          if (_hasChanges)
+            TextButton(
+              onPressed: _isSaving ? null : _save,
+              child: _isSaving
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text(
+                      'Enregistrer',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+            ),
+        ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(16.0),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // General Info Section
-                    const SectionTitle(title: 'Informations Générales'),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _businessNameController,
-                      decoration: const InputDecoration(
-                        labelText: 'Nom de l\'entreprise',
-                        prefixIcon: Icon(Icons.business),
-                        border: OutlineInputBorder(),
+          : RefreshIndicator(
+              onRefresh: _loadUserData,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(16.0),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Avatar
+                      const Center(
+                        child: CircleAvatar(
+                          radius: 50,
+                          child: Icon(Icons.business, size: 50),
+                        ),
                       ),
-                      validator: (value) =>
-                          value == null || value.isEmpty ? 'Champ requis' : null,
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _descriptionController,
-                      decoration: const InputDecoration(
-                        labelText: 'Description',
-                        prefixIcon: Icon(Icons.description),
-                        border: OutlineInputBorder(),
+                      const SizedBox(height: 32),
+
+                      // Business Info Section
+                      const ProviderSectionTitle(title: 'Informations Entreprise'),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _businessNameController,
+                        decoration: const InputDecoration(
+                          labelText: 'Nom de l\'entreprise',
+                          prefixIcon: Icon(Icons.business),
+                          border: OutlineInputBorder(),
+                        ),
+                        validator: (value) =>
+                            value == null || value.isEmpty ? 'Champ requis' : null,
+                        onChanged: (_) => _onFieldChanged(),
                       ),
-                      maxLines: 3,
-                    ),
-                    const SizedBox(height: 24),
-
-                    // Contact Section
-                    const SectionTitle(title: 'Coordonnées'),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _emailController,
-                      decoration: const InputDecoration(
-                        labelText: 'Email',
-                        prefixIcon: Icon(Icons.email),
-                        border: OutlineInputBorder(),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _descriptionController,
+                        decoration: const InputDecoration(
+                          labelText: 'Description',
+                          prefixIcon: Icon(Icons.description),
+                          border: OutlineInputBorder(),
+                          alignLabelWithHint: true,
+                        ),
+                        maxLines: 3,
+                        onChanged: (_) => _onFieldChanged(),
                       ),
-                      keyboardType: TextInputType.emailAddress,
-                    ),
-                    const SizedBox(height: 16),
-                    PhoneInputField(
-                      phoneNumber: _phoneNumber,
-                      onChanged: (phone) => _phoneNumber = phone,
-                    ),
-                    const SizedBox(height: 16),
+                      const SizedBox(height: 24),
 
-                    // Address Section
-                    AddressFormSection(
-                      addressController: _addressController,
-                      cityController: _cityController,
-                      postalCodeController: _postalCodeController,
-                      addressService: _addressService,
-                      onAddressSelected: (result) {
-                        _addressController.text = result.street;
-                        _cityController.text = result.city;
-                        _postalCodeController.text = result.postalCode;
-                        setState(() {
-                          _latitude = result.lat;
-                          _longitude = result.lon;
-                        });
-                      },
-                    ),
-
-                    const SizedBox(height: 32),
-
-                    // Availability Link
-                    OutlinedButton.icon(
-                      icon: const Icon(Icons.schedule),
-                      label: const Text('Gérer mes horaires d\'ouverture'),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.all(16),
-                        alignment: Alignment.centerLeft,
-                        textStyle: const TextStyle(fontSize: 16),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8)),
+                      // Contact Section
+                      const ProviderSectionTitle(title: 'Coordonnées'),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _emailController,
+                        decoration: const InputDecoration(
+                          labelText: 'Email',
+                          prefixIcon: Icon(Icons.email),
+                          border: OutlineInputBorder(),
+                        ),
+                        keyboardType: TextInputType.emailAddress,
+                        onChanged: (_) => _onFieldChanged(),
                       ),
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) =>
-                                const ManageAvailabilityScreen(),
+                      const SizedBox(height: 16),
+                      IntlPhoneField(
+                        key: Key(_phoneNumber ?? 'phone_field'),
+                        decoration: const InputDecoration(
+                          labelText: 'Numéro de téléphone',
+                          border: OutlineInputBorder(),
+                        ),
+                        initialCountryCode: 'FR',
+                        initialValue: _phoneNumber,
+                        countries: const [
+                          Country(
+                            name: "France",
+                            nameTranslations: {"fr": "France", "en": "France"},
+                            flag: "🇫🇷",
+                            code: "FR",
+                            dialCode: "33",
+                            minLength: 9,
+                            maxLength: 9,
                           ),
-                        );
-                      },
-                    ),
-
-                    const SizedBox(height: 32),
-
-                    // Save Button
-                    ElevatedButton(
-                      onPressed: _save,
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        textStyle: const TextStyle(fontSize: 18),
+                        ],
+                        onChanged: (phone) {
+                          _phoneNumber = phone.completeNumber;
+                          _onFieldChanged();
+                        },
                       ),
-                      child: const Text('Enregistrer les modifications'),
-                    ),
+                      const SizedBox(height: 16),
 
-                    const SizedBox(height: 48),
-                    const Divider(),
-                    const SizedBox(height: 16),
+                      // Address Section
+                      AddressFormSection(
+                        addressController: _addressController,
+                        cityController: _cityController,
+                        postalCodeController: _postalCodeController,
+                        addressService: _addressService,
+                        onAddressSelected: (result) {
+                          _addressController.text = result.street;
+                          _cityController.text = result.city;
+                          _postalCodeController.text = result.postalCode;
+                          setState(() {
+                            _latitude = result.lat;
+                            _longitude = result.lon;
+                          });
+                          _onFieldChanged();
+                        },
+                      ),
+                      const SizedBox(height: 24),
 
-                    // Delete Account
-                    Center(
-                      child: TextButton.icon(
-                        onPressed: _deleteAccount,
-                        icon:
-                            const Icon(Icons.delete_forever, color: Colors.red),
-                        label: const Text(
-                          'Supprimer mon compte',
-                          style: TextStyle(color: Colors.red),
-                        ),
-                        style: TextButton.styleFrom(
+                      // Tags Section
+                      TagsEditor(
+                        availableTags: TagsEditor.defaultTags,
+                        selectedTags: _selectedTags,
+                        onTagsChanged: (tags) {
+                          setState(() => _selectedTags = tags);
+                          _onFieldChanged();
+                        },
+                      ),
+                      const SizedBox(height: 32),
+
+                      // Manage Availability
+                      OutlinedButton.icon(
+                        icon: const Icon(Icons.schedule),
+                        label: const Text('Gérer mes horaires d\'ouverture'),
+                        style: OutlinedButton.styleFrom(
                           padding: const EdgeInsets.all(16),
+                          alignment: Alignment.centerLeft,
+                          textStyle: const TextStyle(fontSize: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => const ManageAvailabilityScreen(),
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 32),
+
+                      // Save Button
+                      ElevatedButton.icon(
+                        onPressed: _hasChanges && !_isSaving ? _save : null,
+                        icon: _isSaving
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Icon(Icons.save),
+                        label: const Text('Enregistrer les modifications'),
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          textStyle: const TextStyle(fontSize: 18),
                         ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 24),
+
+                      // Logout Button
+                      OutlinedButton.icon(
+                        onPressed: () async {
+                          final authService = ref.read(authServiceProvider);
+                          await authService.signOut();
+                        },
+                        icon: const Icon(Icons.logout),
+                        label: const Text('Me déconnecter'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.orange,
+                          side: const BorderSide(color: Colors.orange),
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                        ),
+                      ),
+                      const SizedBox(height: 48),
+                      const Divider(),
+                      const SizedBox(height: 16),
+
+                      // Delete Account
+                      Center(
+                        child: TextButton.icon(
+                          onPressed: _deleteAccount,
+                          icon: const Icon(Icons.delete_forever, color: Colors.red),
+                          label: const Text(
+                            'Supprimer mon compte',
+                            style: TextStyle(color: Colors.red),
+                          ),
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.all(16),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),

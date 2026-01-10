@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../core/network/api_client.dart';
 import '../../models/appointment.dart';
+import '../../models/paginated_result.dart';
 import '../appointment_repository.dart';
 
 /// Implementation of AppointmentRepository using Dio
@@ -12,14 +13,22 @@ class AppointmentRepositoryImpl implements AppointmentRepository {
   AppointmentRepositoryImpl(this._dio);
 
   @override
-  Future<List<Appointment>> getMyAppointments() async {
-    final response = await _dio.get('/appointments');
+  Future<PaginatedResult<Appointment>> getMyAppointments({
+    int page = 1,
+    int limit = 20,
+  }) async {
+    final response = await _dio.get(
+      '/appointments',
+      queryParameters: {'page': page, 'limit': limit},
+    );
 
     if (response.statusCode == 200) {
-      final List<dynamic> data = response.data;
-      return data.map((json) => Appointment.fromJson(json)).toList();
+      return PaginatedResult.fromJson(
+        response.data,
+        (json) => Appointment.fromJson(json),
+      );
     }
-    return [];
+    return PaginatedResult(items: [], total: 0, page: page, limit: limit);
   }
 
   @override
@@ -59,6 +68,14 @@ class AppointmentRepositoryImpl implements AppointmentRepository {
         'startTime': startTime.toIso8601String(),
         'notes': notes,
       },
+    );
+  }
+
+  @override
+  Future<void> updateStatus(String id, AppointmentStatus status) async {
+    await _dio.patch(
+      '/appointments/$id/status',
+      data: {'status': status.name.toUpperCase()},
     );
   }
 

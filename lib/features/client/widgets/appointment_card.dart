@@ -17,7 +17,8 @@ class AppointmentCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isCancelled = appointment.status == AppointmentStatus.cancelled;
-    final canInteract = isNext && !isCancelled;
+    // Allow interaction if onTap is provided and not cancelled
+    final canInteract = onTap != null && !isCancelled;
 
     return Card(
       elevation: isNext ? 0 : 1,

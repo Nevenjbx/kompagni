@@ -116,111 +116,116 @@ class _PetInfoPopupState extends ConsumerState<PetInfoPopup> {
           ),
         ],
       ),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Type
-            _InfoRow(
-              icon: _getPetIcon(widget.pet.type),
-              label: 'Type',
-              value: _getPetTypeName(widget.pet.type),
-            ),
-        
-            // Size
-            _InfoRow(
-              icon: Icons.straighten,
-              label: 'Taille',
-              value: _getPetSizeName(widget.pet.size),
-            ),
-        
-            // Character
-            _InfoRow(
-              icon: Icons.emoji_emotions,
-              label: 'Caractère',
-              value: _getPetCharacterName(widget.pet.character),
-            ),
-        
-            const SizedBox(height: 16),
-            const Divider(),
-            const SizedBox(height: 8),
-        
-            // Provider Note Section
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade50,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.grey.shade300),
+      content: SizedBox(
+        width: MediaQuery.of(context).size.width * 0.8, // Make popup wider (80% of screen)
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Type
+              _InfoRow(
+                icon: _getPetIcon(widget.pet.type),
+                label: 'Type',
+                value: _getPetTypeName(widget.pet.type),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(Icons.note, size: 16, color: Colors.grey.shade600),
-                          const SizedBox(width: 4),
-                          Text(
-                            'Note privée',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.grey.shade700,
+          
+              // Size
+              _InfoRow(
+                icon: Icons.straighten,
+                label: 'Taille',
+                value: _getPetSizeName(widget.pet.size),
+              ),
+          
+              // Character
+              _InfoRow(
+                icon: Icons.emoji_emotions,
+                label: 'Caractère',
+                value: _getPetCharacterName(widget.pet.character),
+              ),
+          
+              const SizedBox(height: 16),
+              const Divider(),
+              const SizedBox(height: 16),
+          
+              // Provider Note Section
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey.shade300),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.note, size: 20, color: Colors.grey.shade700),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Note privée',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.grey.shade800,
+                              ),
                             ),
+                          ],
+                        ),
+                        if (_isSaving)
+                          const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
                           ),
-                        ],
-                      ),
-                      if (_isSaving)
-                        const SizedBox(
-                          width: 12,
-                          height: 12,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  if (_isLoading)
-                    const Center(child: Padding(
-                      padding: EdgeInsets.all(8.0),
-                      child: CircularProgressIndicator(),
-                    ))
-                  else
-                    TextField(
-                      controller: _noteController,
-                      maxLines: 4,
-                      minLines: 2,
-                      decoration: InputDecoration(
-                        hintText: 'Ajouter une note sur cet animal...',
-                        isDense: true,
-                        filled: true,
-                        fillColor: Colors.white,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(4),
-                          borderSide: BorderSide(color: Colors.grey.shade300),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(4),
-                          borderSide: BorderSide(color: Colors.grey.shade300),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(4),
-                          borderSide: BorderSide(color: Colors.grey.shade600),
-                        ),
-                        suffixIcon: IconButton(
-                          icon: const Icon(Icons.save),
-                          onPressed: _saveNote,
-                          tooltip: 'Sauvegarder',
-                        ),
-                      ),
+                      ],
                     ),
-                ],
+                    const SizedBox(height: 12),
+                    if (_isLoading)
+                      const Center(child: Padding(
+                        padding: EdgeInsets.all(16.0),
+                        child: CircularProgressIndicator(),
+                      ))
+                    else
+                      TextField(
+                        controller: _noteController,
+                        maxLines: 12, // Increased from 4 to 12
+                        minLines: 6,  // Increased from 2 to 6
+                        style: const TextStyle(fontSize: 16), // Larger text
+                        decoration: InputDecoration(
+                          hintText: 'Ajouter une note de suivi, observations, etc.',
+                          isDense: true,
+                          filled: true,
+                          fillColor: Colors.white,
+                          contentPadding: const EdgeInsets.all(16),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: Colors.grey.shade300),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: Colors.grey.shade300),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: const BorderSide(color: Colors.blue, width: 2),
+                          ),
+                          suffixIcon: IconButton(
+                            icon: const Icon(Icons.save, size: 28, color: Colors.blue),
+                            onPressed: _saveNote,
+                            tooltip: 'Sauvegarder',
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
       actions: [

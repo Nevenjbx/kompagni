@@ -74,6 +74,19 @@ class PetRepositoryImpl implements PetRepository {
       data: {'note': note},
     );
   }
+
+  @override
+  Future<Pet?> getPet(String id) async {
+    try {
+      final response = await _dio.get('/pets/$id');
+      if (response.statusCode == 200) {
+        return Pet.fromJson(response.data);
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
 }
 
 /// Provider for PetRepository

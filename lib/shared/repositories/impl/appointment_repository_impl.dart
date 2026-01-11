@@ -59,6 +59,7 @@ class AppointmentRepositoryImpl implements AppointmentRepository {
     required String serviceId,
     required DateTime startTime,
     String? notes,
+    String? petId,
   }) async {
     await _dio.post(
       '/appointments',
@@ -67,6 +68,7 @@ class AppointmentRepositoryImpl implements AppointmentRepository {
         'serviceId': serviceId,
         'startTime': startTime.toIso8601String(),
         'notes': notes,
+        'petId': petId,
       },
     );
   }

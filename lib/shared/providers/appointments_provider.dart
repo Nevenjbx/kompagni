@@ -46,12 +46,12 @@ class AppointmentsNotifier extends AsyncNotifier<List<Appointment>> {
     await refresh();
   }
 
-  /// Create a new appointment
   Future<void> createAppointment({
     required String providerId,
     required String serviceId,
     required DateTime startTime,
     String? notes,
+    String? petId,
   }) async {
     final repository = ref.read(appointmentRepositoryProvider);
     await repository.createAppointment(
@@ -59,6 +59,7 @@ class AppointmentsNotifier extends AsyncNotifier<List<Appointment>> {
       serviceId: serviceId,
       startTime: startTime,
       notes: notes,
+      petId: petId,
     );
     await refresh();
   }

@@ -1,5 +1,6 @@
 import 'provider.dart';
 import 'service.dart';
+import 'pet.dart';
 
 /// Represents an appointment booking
 class Appointment {
@@ -11,6 +12,7 @@ class Appointment {
   final DateTime endTime;
   final AppointmentStatus status;
   final String? notes;
+  final String? petId;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -18,6 +20,7 @@ class Appointment {
   final Provider? provider;
   final Service? service;
   final AppointmentClient? client;
+  final Pet? pet;
 
   const Appointment({
     required this.id,
@@ -33,6 +36,8 @@ class Appointment {
     this.provider,
     this.service,
     this.client,
+    this.petId,
+    this.pet,
   });
 
   factory Appointment.fromJson(Map<String, dynamic> json) {
@@ -45,6 +50,7 @@ class Appointment {
       endTime: DateTime.parse(json['endTime'] as String),
       status: AppointmentStatus.fromString(json['status'] as String),
       notes: json['notes'] as String?,
+      petId: json['petId'] as String?,
       createdAt: json['createdAt'] != null 
           ? DateTime.parse(json['createdAt'] as String)
           : DateTime.now(),
@@ -60,6 +66,9 @@ class Appointment {
       client: json['client'] != null
           ? AppointmentClient.fromJson(json['client'] as Map<String, dynamic>)
           : null,
+      pet: json['pet'] != null
+          ? Pet.fromJson(json['pet'] as Map<String, dynamic>)
+          : null,
     );
   }
 
@@ -73,18 +82,23 @@ class Appointment {
       'endTime': endTime.toIso8601String(),
       'status': status.name,
       'notes': notes,
+      'petId': petId,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };
   }
 
-  /// Check if this appointment is upcoming (not past and not cancelled)
+  /// Check if this appointment is upcoming (not past, not cancelled, not completed)
   bool get isUpcoming => 
-      startTime.isAfter(DateTime.now()) && status != AppointmentStatus.cancelled;
+      startTime.isAfter(DateTime.now()) && 
+      status != AppointmentStatus.cancelled &&
+      status != AppointmentStatus.completed;
 
-  /// Check if this appointment is in the past or cancelled
+  /// Check if this appointment is in the past, cancelled, or completed
   bool get isHistory => 
-      startTime.isBefore(DateTime.now()) || status == AppointmentStatus.cancelled;
+      startTime.isBefore(DateTime.now()) || 
+      status == AppointmentStatus.cancelled ||
+      status == AppointmentStatus.completed;
 
   /// Get the duration in minutes
   int get durationMinutes => endTime.difference(startTime).inMinutes;

@@ -25,6 +25,7 @@ abstract class AppointmentRepository {
     required String serviceId,
     required DateTime startTime,
     String? notes,
+    String? petId,
   });
 
   /// Update appointment status

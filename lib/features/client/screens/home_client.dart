@@ -42,21 +42,39 @@ class _HomeClientScreenState extends ConsumerState<HomeClientScreen> {
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        title: const Text('Bienvenue sur Kompagni !'),
-        content: const Text('Commençons par créer le profil de votre compagnon.'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        icon: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.brown.shade50,
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(Icons.pets, size: 48, color: Colors.brown),
+        ),
+        title: const Text(
+          'Bienvenue sur Kompagni !',
+          textAlign: TextAlign.center,
+        ),
+        content: const Text(
+          'Pour pouvoir prendre rendez-vous avec nos experts, '
+          'veuillez d\'abord créer le profil de votre compagnon.',
+          textAlign: TextAlign.center,
+        ),
+        actionsAlignment: MainAxisAlignment.center,
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
             child: const Text('Plus tard'),
           ),
-          FilledButton(
+          FilledButton.icon(
             onPressed: () {
               Navigator.of(context).pop();
               Navigator.of(context).push(
                 MaterialPageRoute(builder: (context) => const AddPetScreen()),
               );
             },
-            child: const Text('Ajouter maintenant'),
+            icon: const Icon(Icons.add),
+            label: const Text('Ajouter mon animal'),
           ),
         ],
       ),

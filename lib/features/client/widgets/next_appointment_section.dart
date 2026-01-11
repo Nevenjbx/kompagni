@@ -33,29 +33,67 @@ class NextAppointmentSection extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Détails du rendez-vous'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primaryContainer.withAlpha(50),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.calendar_today,
+                color: Theme.of(context).colorScheme.primary,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Text('Détails du rendez-vous', style: TextStyle(fontSize: 18)),
+          ],
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Service: ${appointment.service?.name ?? 'N/A'}',
-              style: const TextStyle(fontWeight: FontWeight.bold),
+            _buildDetailRow(
+              context,
+              Icons.content_cut,
+              'Service',
+              appointment.service?.name ?? 'N/A',
             ),
-            const SizedBox(height: 8),
-            Text('Prestataire: ${appointment.provider?.businessName ?? 'N/A'}'),
-            const SizedBox(height: 8),
-            Text(
-              'Date: ${DateFormat('dd/MM/yyyy').format(appointment.startTime)}',
+            const SizedBox(height: 12),
+            _buildDetailRow(
+              context,
+              Icons.store,
+              'Prestataire',
+              appointment.provider?.businessName ?? 'N/A',
             ),
-            Text(
-              'Heure: ${DateFormat('HH:mm').format(appointment.startTime)}',
-            ),
-            const SizedBox(height: 8),
-            if (appointment.provider != null)
-              Text(
-                'Adresse: ${appointment.provider!.address}, ${appointment.provider!.city}',
+             const SizedBox(height: 12),
+            if (appointment.pet != null) ...[
+              _buildDetailRow(
+                context,
+                Icons.pets,
+                'Pour',
+                appointment.pet!.name,
               ),
+              const SizedBox(height: 12),
+            ],
+            _buildDetailRow(
+              context,
+              Icons.event,
+              'Date et Heure',
+              '${DateFormat('dd/MM/yyyy').format(appointment.startTime)} à ${DateFormat('HH:mm').format(appointment.startTime)}',
+            ),
+            if (appointment.provider != null) ...[
+              const SizedBox(height: 12),
+              _buildDetailRow(
+                context,
+                Icons.location_on,
+                'Adresse',
+                '${appointment.provider!.address}, ${appointment.provider!.city}',
+              ),
+            ],
           ],
         ),
         actions: [
@@ -63,16 +101,53 @@ class NextAppointmentSection extends ConsumerWidget {
             onPressed: () => Navigator.of(ctx).pop(),
             child: const Text('Fermer'),
           ),
-          TextButton(
+          FilledButton.tonal(
             onPressed: () {
               Navigator.of(ctx).pop();
               _cancelAppointment(context, ref, appointment.id);
             },
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            style: FilledButton.styleFrom(
+              backgroundColor: Colors.red.shade50,
+              foregroundColor: Colors.red,
+            ),
             child: const Text('Annuler le rendez-vous'),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildDetailRow(
+      BuildContext context, IconData icon, String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 18, color: Colors.grey.shade600),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey.shade600,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 

@@ -25,4 +25,7 @@ abstract class PetRepository {
 
   /// Update provider note for a pet
   Future<void> updatePetNote(String petId, String note);
+
+  /// Get a single pet by ID
+  Future<Pet?> getPet(String id);
 }

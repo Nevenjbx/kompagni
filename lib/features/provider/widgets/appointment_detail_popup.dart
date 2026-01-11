@@ -6,7 +6,6 @@ import '../../../shared/models/appointment.dart';
 import '../../../shared/providers/appointments_provider.dart';
 import '../../../shared/repositories/impl/appointment_repository_impl.dart';
 import 'pet_info_popup.dart';
-import '../../../shared/models/pet.dart';
 import '../../../shared/repositories/impl/pet_repository_impl.dart';
 
 /// Popup dialog displaying full appointment details with action buttons
@@ -107,6 +106,20 @@ class AppointmentDetailPopup extends ConsumerWidget {
           ),
 
           const SizedBox(height: 16),
+          
+          if (appointment.pet != null)
+            _InfoRow(
+              icon: Icons.pets,
+              label: 'Animal',
+              value: appointment.pet!.name,
+            ),
+          
+          if (appointment.pet == null && appointment.petId != null)
+             _InfoRow(
+              icon: Icons.pets,
+              label: 'Animal',
+              value: 'Chargement...', // Or just show the icon, we don't know the name yet.
+            ),
 
           // Client Info
           const Text(
@@ -175,7 +188,7 @@ class AppointmentDetailPopup extends ConsumerWidget {
           OutlinedButton.icon(
             onPressed: () => _showPetInfo(context),
             icon: const Icon(Icons.pets),
-            label: const Text('Infos du chien'),
+            label: const Text('Infos de l\'animal'),
             style: OutlinedButton.styleFrom(
               minimumSize: const Size(double.infinity, 44),
               foregroundColor: Colors.brown,
@@ -230,6 +243,12 @@ class AppointmentDetailPopup extends ConsumerWidget {
   }
 
   Future<void> _showPetInfo(BuildContext context) async {
+    // 1. If linked pet is available, show it directly
+    if (appointment.pet != null) {
+      PetInfoPopup.show(context, appointment.pet!);
+      return;
+    }
+
     // Show loading
     showDialog(
       context: context,
@@ -241,62 +260,34 @@ class AppointmentDetailPopup extends ConsumerWidget {
       final container = ProviderScope.containerOf(context);
       final repository = container.read(petRepositoryProvider);
       
-      // Fetch user's pets
-      final pets = await repository.getUserPets(appointment.clientId);
+      // 2. If petId is available but pet object missing, fetch it
+      if (appointment.petId != null) {
+        final pet = await repository.getPet(appointment.petId!);
+        if (context.mounted) {
+           Navigator.of(context).pop(); // Dismiss loading
+           if (pet != null) {
+             PetInfoPopup.show(context, pet);
+           } else {
+             ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Profil animal introuvable')),
+            );
+           }
+        }
+        return;
+      }
       
+      // If no petId linked
       if (context.mounted) {
         Navigator.of(context).pop(); // Dismiss loading
-
-        if (pets.isEmpty) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Aucun animal trouvé pour ce client')),
-          );
-        } else if (pets.length == 1) {
-          // If only one pet, show it directly
-          PetInfoPopup.show(context, pets.first);
-        } else {
-          // If multiple pets, let user choose
-          showDialog(
-            context: context,
-            builder: (context) => AlertDialog(
-              title: const Text('Choisir un animal'),
-              content: SizedBox(
-                width: double.maxFinite,
-                child: ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: pets.length,
-                  itemBuilder: (context, index) {
-                    final pet = pets[index];
-                    return ListTile(
-                      leading: Icon(
-                        pet.type == AnimalType.dog ? Icons.pets : Icons.cruelty_free,
-                        color: Colors.brown,
-                      ),
-                      title: Text(pet.name),
-                      subtitle: Text(pet.breed),
-                      onTap: () {
-                        Navigator.of(context).pop();
-                        PetInfoPopup.show(context, pet);
-                      },
-                    );
-                  },
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Annuler'),
-                ),
-              ],
-            ),
-          );
-        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Aucun animal associé à ce rendez-vous')),
+        );
       }
     } catch (e) {
       if (context.mounted) {
         Navigator.of(context).pop(); // Dismiss loading
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Erreur lors du chargement des animaux')),
+          const SnackBar(content: Text('Erreur lors du chargement des infos')),
         );
       }
     }

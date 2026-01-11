@@ -1,6 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/provider.dart' as models;
-import '../repositories/user_repository.dart';
 import '../repositories/impl/user_repository_impl.dart'; // For userRepositoryProvider
 
 /// Provider for managing user's favorite providers state
